@@ -36,12 +36,22 @@ form:
 <sign>? <coefficient> <literal>
 ```
 
-with whitespace between terms. The sign defaults to `+` if absent.
+with whitespace between terms. The sign is attached to the
+coefficient token (`+1`, `-1`) or omitted (interpreted as `+`).
 Coefficients are non-zero integers. Literals are either `varname` for
 a positive literal or `~varname` for the negation of a variable.
-Variable names are sequences of printable non-whitespace characters
-starting with a letter or underscore (we accept VeriPB's typical
-form `x1`, `x42`, `aux_foo`, etc.).
+
+Variable names are any non-whitespace token that is not itself an
+operator (`>=`, `<=`, `=`), the terminator (`;`), or a coefficient.
+In practice the real-world OPB files we have seen use names like
+`x1`, `y_x1_5`, `i[a][b0]`, `f[0][notequals]`, and
+`x[money_a_d][0_1]` — alphanumeric with `_`, `[`, and `]`. We do
+not impose a tighter grammar than "non-whitespace, not a reserved
+sigil"; tightening can come later if upstream VeriPB nails down a
+formal grammar.
+
+A bare integer (a coefficient with no following literal) is treated
+as an LHS constant.
 
 ## Operators
 
@@ -62,11 +72,21 @@ moved to the RHS during normalisation. See
 
 A constraint line may be prefixed with `@name `, where `name` is a
 non-whitespace identifier. The label is associated with that
-constraint. Labels on lines other than constraints are not part of v1.
+constraint. Real labels we have seen include `@c[_1][le]`,
+`@i[a][lb]`, and `@c[money_a_d][[1]gt[2]]` (note the nested
+brackets), so the label name follows the same liberal
+"non-whitespace token" rule as variable names. Labels on lines other
+than constraints are not part of v1.
+
+Comment lines and labelled constraints can interleave freely; a
+labelled constraint is just a constraint with a leading label
+token.
 
 ## Terminator
 
-Each constraint, objective, and `preserved:` line ends with ` ;`.
+Each constraint, objective, and `preserved:` line ends with a `;`.
+In practice both ` ;` (with a leading space) and `;` (attached to
+the previous token) occur in real OPB output, and both are accepted.
 Lines that omit the terminator are rejected.
 
 ## What we reject

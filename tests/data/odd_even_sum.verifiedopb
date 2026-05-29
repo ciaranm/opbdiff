@@ -1,0 +1,15 @@
+preserved: i[a][b0] i[a][b1] i[a][b2] i[b][b0] i[b][b1] i[b][b2] i[c][b0] i[c][b1] i[c][b2] i[d][b0] i[d][b1] i[d][b2] i[d][b3] i[e][b0] i[e][b1] ;
+@i[a][lb] 1 i[a][b0] 2 i[a][b1] 4 i[a][b2] >= 0 ;
+@i[a][ub] 1 i[a][b0] 2 i[a][b1] 4 i[a][b2] <= 5 ;
+@i[b][lb] 1 i[b][b0] 2 i[b][b1] 4 i[b][b2] >= 0 ;
+@i[b][ub] 1 i[b][b0] 2 i[b][b1] 4 i[b][b2] <= 5 ;
+@i[c][lb] 1 i[c][b0] 2 i[c][b1] 4 i[c][b2] >= 0 ;
+@i[c][ub] 1 i[c][b0] 2 i[c][b1] 4 i[c][b2] <= 5 ;
+@i[d][lb] 1 i[d][b0] 2 i[d][b1] 4 i[d][b2] 8 i[d][b3] >= 0 ;
+@i[d][ub] 1 i[d][b0] 2 i[d][b1] 4 i[d][b2] 8 i[d][b3] <= 10 ;
+@i[e][lb] 1 i[e][b0] 2 i[e][b1] >= 0 ;
+@i[e][ub] 1 i[e][b0] 2 i[e][b1] <= 2 ;
+@c[_1][ge] 1 i[e][b0] 2 i[e][b1] -2 i[d][b0] -4 i[d][b1] -8 i[d][b2] -16 i[d][b3] 2 i[c][b0] 4 i[c][b1] 8 i[c][b2] 2 i[b][b0] 4 i[b][b1] 8 i[b][b2] 2 i[a][b0] 4 i[a][b1] 8 i[a][b2] >= 1 ;
+@c[_1][le] -1 i[e][b0] -2 i[e][b1] 2 i[d][b0] 4 i[d][b1] 8 i[d][b2] 16 i[d][b3] -2 i[c][b0] -4 i[c][b1] -8 i[c][b2] -2 i[b][b0] -4 i[b][b1] -8 i[b][b2] -2 i[a][b0] -4 i[a][b1] -8 i[a][b2] >= -1 ;
+@c[_2][ge] 1 i[e][b0] 2 i[e][b1] 2 i[d][b0] 4 i[d][b1] 8 i[d][b2] 16 i[d][b3] -2 i[c][b0] -4 i[c][b1] -8 i[c][b2] 2 i[b][b0] 4 i[b][b1] 8 i[b][b2] -2 i[a][b0] -4 i[a][b1] -8 i[a][b2] >= 1 ;
+@c[_2][le] -1 i[e][b0] -2 i[e][b1] -2 i[d][b0] -4 i[d][b1] -8 i[d][b2] -16 i[d][b3] 2 i[c][b0] 4 i[c][b1] 8 i[c][b2] -2 i[b][b0] -4 i[b][b1] -8 i[b][b2] 2 i[a][b0] 4 i[a][b1] 8 i[a][b2] >= -1 ;

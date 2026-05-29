@@ -1,0 +1,419 @@
+* #variable= 100 #constraint= 242
+preserved: i[box[0]][b0] i[box[0]][b1] i[box[0]][b2] i[box[0]][b3] i[box[1]][b0] i[box[1]][b1] i[box[1]][b2] i[box[1]][b3] i[box[2]][b0] i[box[2]][b1] i[box[2]][b2] i[box[2]][b3] i[box[3]][b0] i[box[3]][b1] i[box[3]][b2] i[box[3]][b3] i[box[4]][b0] i[box[4]][b1] i[box[4]][b2] i[box[4]][b3] i[box[5]][b0] i[box[5]][b1] i[box[5]][b2] i[box[5]][b3] i[box[6]][b0] i[box[6]][b1] i[box[6]][b2] i[box[6]][b3] i[box[7]][b0] i[box[7]][b1] i[box[7]][b2] i[box[7]][b3] i[diff0_1][sign] i[diff0_1][b0] i[diff0_1][b1] i[diff0_1][b2] i[diff0_2][sign] i[diff0_2][b0] i[diff0_2][b1] i[diff0_2][b2] i[diff0_3][sign] i[diff0_3][b0] i[diff0_3][b1] i[diff0_3][b2] i[diff0_4][sign] i[diff0_4][b0] i[diff0_4][b1] i[diff0_4][b2] i[diff1_3][sign] i[diff1_3][b0] i[diff1_3][b1] i[diff1_3][b2] i[diff1_4][sign] i[diff1_4][b0] i[diff1_4][b1] i[diff1_4][b2] i[diff1_5][sign] i[diff1_5][b0] i[diff1_5][b1] i[diff1_5][b2] i[diff2_3][sign] i[diff2_3][b0] i[diff2_3][b1] i[diff2_3][b2] i[diff2_6][sign] i[diff2_6][b0] i[diff2_6][b1] i[diff2_6][b2] i[diff3_4][sign] i[diff3_4][b0] i[diff3_4][b1] i[diff3_4][b2] i[diff3_6][sign] i[diff3_6][b0] i[diff3_6][b1] i[diff3_6][b2] i[diff3_7][sign] i[diff3_7][b0] i[diff3_7][b1] i[diff3_7][b2] i[diff4_5][sign] i[diff4_5][b0] i[diff4_5][b1] i[diff4_5][b2] i[diff4_6][sign] i[diff4_6][b0] i[diff4_6][b1] i[diff4_6][b2] i[diff4_7][sign] i[diff4_7][b0] i[diff4_7][b1] i[diff4_7][b2] i[diff5_7][sign] i[diff5_7][b0] i[diff5_7][b1] i[diff5_7][b2] i[diff6_7][sign] i[diff6_7][b0] i[diff6_7][b1] i[diff6_7][b2] ;
+1 i[box[0]][b0] 2 i[box[0]][b1] 4 i[box[0]][b2] 8 i[box[0]][b3] >= 1 ;
+-1 i[box[0]][b0] -2 i[box[0]][b1] -4 i[box[0]][b2] -8 i[box[0]][b3] >= -8 ;
+1 i[box[1]][b0] 2 i[box[1]][b1] 4 i[box[1]][b2] 8 i[box[1]][b3] >= 1 ;
+-1 i[box[1]][b0] -2 i[box[1]][b1] -4 i[box[1]][b2] -8 i[box[1]][b3] >= -8 ;
+1 i[box[2]][b0] 2 i[box[2]][b1] 4 i[box[2]][b2] 8 i[box[2]][b3] >= 1 ;
+-1 i[box[2]][b0] -2 i[box[2]][b1] -4 i[box[2]][b2] -8 i[box[2]][b3] >= -8 ;
+1 i[box[3]][b0] 2 i[box[3]][b1] 4 i[box[3]][b2] 8 i[box[3]][b3] >= 1 ;
+-1 i[box[3]][b0] -2 i[box[3]][b1] -4 i[box[3]][b2] -8 i[box[3]][b3] >= -8 ;
+1 i[box[4]][b0] 2 i[box[4]][b1] 4 i[box[4]][b2] 8 i[box[4]][b3] >= 1 ;
+-1 i[box[4]][b0] -2 i[box[4]][b1] -4 i[box[4]][b2] -8 i[box[4]][b3] >= -8 ;
+1 i[box[5]][b0] 2 i[box[5]][b1] 4 i[box[5]][b2] 8 i[box[5]][b3] >= 1 ;
+-1 i[box[5]][b0] -2 i[box[5]][b1] -4 i[box[5]][b2] -8 i[box[5]][b3] >= -8 ;
+1 i[box[6]][b0] 2 i[box[6]][b1] 4 i[box[6]][b2] 8 i[box[6]][b3] >= 1 ;
+-1 i[box[6]][b0] -2 i[box[6]][b1] -4 i[box[6]][b2] -8 i[box[6]][b3] >= -8 ;
+1 i[box[7]][b0] 2 i[box[7]][b1] 4 i[box[7]][b2] 8 i[box[7]][b3] >= 1 ;
+-1 i[box[7]][b0] -2 i[box[7]][b1] -4 i[box[7]][b2] -8 i[box[7]][b3] >= -8 ;
+-8 i[diff0_1][sign] 1 i[diff0_1][b0] 2 i[diff0_1][b1] 4 i[diff0_1][b2] >= -7 ;
+8 i[diff0_1][sign] -1 i[diff0_1][b0] -2 i[diff0_1][b1] -4 i[diff0_1][b2] >= -7 ;
+-8 i[diff0_2][sign] 1 i[diff0_2][b0] 2 i[diff0_2][b1] 4 i[diff0_2][b2] >= -7 ;
+8 i[diff0_2][sign] -1 i[diff0_2][b0] -2 i[diff0_2][b1] -4 i[diff0_2][b2] >= -7 ;
+-8 i[diff0_3][sign] 1 i[diff0_3][b0] 2 i[diff0_3][b1] 4 i[diff0_3][b2] >= -7 ;
+8 i[diff0_3][sign] -1 i[diff0_3][b0] -2 i[diff0_3][b1] -4 i[diff0_3][b2] >= -7 ;
+-8 i[diff0_4][sign] 1 i[diff0_4][b0] 2 i[diff0_4][b1] 4 i[diff0_4][b2] >= -7 ;
+8 i[diff0_4][sign] -1 i[diff0_4][b0] -2 i[diff0_4][b1] -4 i[diff0_4][b2] >= -7 ;
+-8 i[diff1_3][sign] 1 i[diff1_3][b0] 2 i[diff1_3][b1] 4 i[diff1_3][b2] >= -7 ;
+8 i[diff1_3][sign] -1 i[diff1_3][b0] -2 i[diff1_3][b1] -4 i[diff1_3][b2] >= -7 ;
+-8 i[diff1_4][sign] 1 i[diff1_4][b0] 2 i[diff1_4][b1] 4 i[diff1_4][b2] >= -7 ;
+8 i[diff1_4][sign] -1 i[diff1_4][b0] -2 i[diff1_4][b1] -4 i[diff1_4][b2] >= -7 ;
+-8 i[diff1_5][sign] 1 i[diff1_5][b0] 2 i[diff1_5][b1] 4 i[diff1_5][b2] >= -7 ;
+8 i[diff1_5][sign] -1 i[diff1_5][b0] -2 i[diff1_5][b1] -4 i[diff1_5][b2] >= -7 ;
+-8 i[diff2_3][sign] 1 i[diff2_3][b0] 2 i[diff2_3][b1] 4 i[diff2_3][b2] >= -7 ;
+8 i[diff2_3][sign] -1 i[diff2_3][b0] -2 i[diff2_3][b1] -4 i[diff2_3][b2] >= -7 ;
+-8 i[diff2_6][sign] 1 i[diff2_6][b0] 2 i[diff2_6][b1] 4 i[diff2_6][b2] >= -7 ;
+8 i[diff2_6][sign] -1 i[diff2_6][b0] -2 i[diff2_6][b1] -4 i[diff2_6][b2] >= -7 ;
+-8 i[diff3_4][sign] 1 i[diff3_4][b0] 2 i[diff3_4][b1] 4 i[diff3_4][b2] >= -7 ;
+8 i[diff3_4][sign] -1 i[diff3_4][b0] -2 i[diff3_4][b1] -4 i[diff3_4][b2] >= -7 ;
+-8 i[diff3_6][sign] 1 i[diff3_6][b0] 2 i[diff3_6][b1] 4 i[diff3_6][b2] >= -7 ;
+8 i[diff3_6][sign] -1 i[diff3_6][b0] -2 i[diff3_6][b1] -4 i[diff3_6][b2] >= -7 ;
+-8 i[diff3_7][sign] 1 i[diff3_7][b0] 2 i[diff3_7][b1] 4 i[diff3_7][b2] >= -7 ;
+8 i[diff3_7][sign] -1 i[diff3_7][b0] -2 i[diff3_7][b1] -4 i[diff3_7][b2] >= -7 ;
+-8 i[diff4_5][sign] 1 i[diff4_5][b0] 2 i[diff4_5][b1] 4 i[diff4_5][b2] >= -7 ;
+8 i[diff4_5][sign] -1 i[diff4_5][b0] -2 i[diff4_5][b1] -4 i[diff4_5][b2] >= -7 ;
+-8 i[diff4_6][sign] 1 i[diff4_6][b0] 2 i[diff4_6][b1] 4 i[diff4_6][b2] >= -7 ;
+8 i[diff4_6][sign] -1 i[diff4_6][b0] -2 i[diff4_6][b1] -4 i[diff4_6][b2] >= -7 ;
+-8 i[diff4_7][sign] 1 i[diff4_7][b0] 2 i[diff4_7][b1] 4 i[diff4_7][b2] >= -7 ;
+8 i[diff4_7][sign] -1 i[diff4_7][b0] -2 i[diff4_7][b1] -4 i[diff4_7][b2] >= -7 ;
+-8 i[diff5_7][sign] 1 i[diff5_7][b0] 2 i[diff5_7][b1] 4 i[diff5_7][b2] >= -7 ;
+8 i[diff5_7][sign] -1 i[diff5_7][b0] -2 i[diff5_7][b1] -4 i[diff5_7][b2] >= -7 ;
+-8 i[diff6_7][sign] 1 i[diff6_7][b0] 2 i[diff6_7][b1] 4 i[diff6_7][b2] >= -7 ;
+8 i[diff6_7][sign] -1 i[diff6_7][b0] -2 i[diff6_7][b1] -4 i[diff6_7][b2] >= -7 ;
+* constraint AllDifferent not equals because lower
+@c[cmad][[1]gt[2]] -1 i[box[0]][b0] -2 i[box[0]][b1] -4 i[box[0]][b2] -8 i[box[0]][b3] 1 i[box[1]][b0] 2 i[box[1]][b1] 4 i[box[1]][b2] 8 i[box[1]][b3] 16 ~f[0][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[1]lt[2]] 1 i[box[0]][b0] 2 i[box[0]][b1] 4 i[box[0]][b2] 8 i[box[0]][b3] -1 i[box[1]][b0] -2 i[box[1]][b1] -4 i[box[1]][b2] -8 i[box[1]][b3] 16 f[0][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[1]gt[3]] -1 i[box[0]][b0] -2 i[box[0]][b1] -4 i[box[0]][b2] -8 i[box[0]][b3] 1 i[box[2]][b0] 2 i[box[2]][b1] 4 i[box[2]][b2] 8 i[box[2]][b3] 16 ~f[1][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[1]lt[3]] 1 i[box[0]][b0] 2 i[box[0]][b1] 4 i[box[0]][b2] 8 i[box[0]][b3] -1 i[box[2]][b0] -2 i[box[2]][b1] -4 i[box[2]][b2] -8 i[box[2]][b3] 16 f[1][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[1]gt[4]] -1 i[box[0]][b0] -2 i[box[0]][b1] -4 i[box[0]][b2] -8 i[box[0]][b3] 1 i[box[3]][b0] 2 i[box[3]][b1] 4 i[box[3]][b2] 8 i[box[3]][b3] 16 ~f[2][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[1]lt[4]] 1 i[box[0]][b0] 2 i[box[0]][b1] 4 i[box[0]][b2] 8 i[box[0]][b3] -1 i[box[3]][b0] -2 i[box[3]][b1] -4 i[box[3]][b2] -8 i[box[3]][b3] 16 f[2][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[1]gt[5]] -1 i[box[0]][b0] -2 i[box[0]][b1] -4 i[box[0]][b2] -8 i[box[0]][b3] 1 i[box[4]][b0] 2 i[box[4]][b1] 4 i[box[4]][b2] 8 i[box[4]][b3] 16 ~f[3][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[1]lt[5]] 1 i[box[0]][b0] 2 i[box[0]][b1] 4 i[box[0]][b2] 8 i[box[0]][b3] -1 i[box[4]][b0] -2 i[box[4]][b1] -4 i[box[4]][b2] -8 i[box[4]][b3] 16 f[3][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[1]gt[6]] -1 i[box[0]][b0] -2 i[box[0]][b1] -4 i[box[0]][b2] -8 i[box[0]][b3] 1 i[box[5]][b0] 2 i[box[5]][b1] 4 i[box[5]][b2] 8 i[box[5]][b3] 16 ~f[4][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[1]lt[6]] 1 i[box[0]][b0] 2 i[box[0]][b1] 4 i[box[0]][b2] 8 i[box[0]][b3] -1 i[box[5]][b0] -2 i[box[5]][b1] -4 i[box[5]][b2] -8 i[box[5]][b3] 16 f[4][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[1]gt[7]] -1 i[box[0]][b0] -2 i[box[0]][b1] -4 i[box[0]][b2] -8 i[box[0]][b3] 1 i[box[6]][b0] 2 i[box[6]][b1] 4 i[box[6]][b2] 8 i[box[6]][b3] 16 ~f[5][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[1]lt[7]] 1 i[box[0]][b0] 2 i[box[0]][b1] 4 i[box[0]][b2] 8 i[box[0]][b3] -1 i[box[6]][b0] -2 i[box[6]][b1] -4 i[box[6]][b2] -8 i[box[6]][b3] 16 f[5][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[1]gt[8]] -1 i[box[0]][b0] -2 i[box[0]][b1] -4 i[box[0]][b2] -8 i[box[0]][b3] 1 i[box[7]][b0] 2 i[box[7]][b1] 4 i[box[7]][b2] 8 i[box[7]][b3] 16 ~f[6][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[1]lt[8]] 1 i[box[0]][b0] 2 i[box[0]][b1] 4 i[box[0]][b2] 8 i[box[0]][b3] -1 i[box[7]][b0] -2 i[box[7]][b1] -4 i[box[7]][b2] -8 i[box[7]][b3] 16 f[6][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[2]gt[3]] -1 i[box[1]][b0] -2 i[box[1]][b1] -4 i[box[1]][b2] -8 i[box[1]][b3] 1 i[box[2]][b0] 2 i[box[2]][b1] 4 i[box[2]][b2] 8 i[box[2]][b3] 16 ~f[7][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[2]lt[3]] 1 i[box[1]][b0] 2 i[box[1]][b1] 4 i[box[1]][b2] 8 i[box[1]][b3] -1 i[box[2]][b0] -2 i[box[2]][b1] -4 i[box[2]][b2] -8 i[box[2]][b3] 16 f[7][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[2]gt[4]] -1 i[box[1]][b0] -2 i[box[1]][b1] -4 i[box[1]][b2] -8 i[box[1]][b3] 1 i[box[3]][b0] 2 i[box[3]][b1] 4 i[box[3]][b2] 8 i[box[3]][b3] 16 ~f[8][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[2]lt[4]] 1 i[box[1]][b0] 2 i[box[1]][b1] 4 i[box[1]][b2] 8 i[box[1]][b3] -1 i[box[3]][b0] -2 i[box[3]][b1] -4 i[box[3]][b2] -8 i[box[3]][b3] 16 f[8][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[2]gt[5]] -1 i[box[1]][b0] -2 i[box[1]][b1] -4 i[box[1]][b2] -8 i[box[1]][b3] 1 i[box[4]][b0] 2 i[box[4]][b1] 4 i[box[4]][b2] 8 i[box[4]][b3] 16 ~f[9][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[2]lt[5]] 1 i[box[1]][b0] 2 i[box[1]][b1] 4 i[box[1]][b2] 8 i[box[1]][b3] -1 i[box[4]][b0] -2 i[box[4]][b1] -4 i[box[4]][b2] -8 i[box[4]][b3] 16 f[9][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[2]gt[6]] -1 i[box[1]][b0] -2 i[box[1]][b1] -4 i[box[1]][b2] -8 i[box[1]][b3] 1 i[box[5]][b0] 2 i[box[5]][b1] 4 i[box[5]][b2] 8 i[box[5]][b3] 16 ~f[10][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[2]lt[6]] 1 i[box[1]][b0] 2 i[box[1]][b1] 4 i[box[1]][b2] 8 i[box[1]][b3] -1 i[box[5]][b0] -2 i[box[5]][b1] -4 i[box[5]][b2] -8 i[box[5]][b3] 16 f[10][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[2]gt[7]] -1 i[box[1]][b0] -2 i[box[1]][b1] -4 i[box[1]][b2] -8 i[box[1]][b3] 1 i[box[6]][b0] 2 i[box[6]][b1] 4 i[box[6]][b2] 8 i[box[6]][b3] 16 ~f[11][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[2]lt[7]] 1 i[box[1]][b0] 2 i[box[1]][b1] 4 i[box[1]][b2] 8 i[box[1]][b3] -1 i[box[6]][b0] -2 i[box[6]][b1] -4 i[box[6]][b2] -8 i[box[6]][b3] 16 f[11][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[2]gt[8]] -1 i[box[1]][b0] -2 i[box[1]][b1] -4 i[box[1]][b2] -8 i[box[1]][b3] 1 i[box[7]][b0] 2 i[box[7]][b1] 4 i[box[7]][b2] 8 i[box[7]][b3] 16 ~f[12][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[2]lt[8]] 1 i[box[1]][b0] 2 i[box[1]][b1] 4 i[box[1]][b2] 8 i[box[1]][b3] -1 i[box[7]][b0] -2 i[box[7]][b1] -4 i[box[7]][b2] -8 i[box[7]][b3] 16 f[12][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[3]gt[4]] -1 i[box[2]][b0] -2 i[box[2]][b1] -4 i[box[2]][b2] -8 i[box[2]][b3] 1 i[box[3]][b0] 2 i[box[3]][b1] 4 i[box[3]][b2] 8 i[box[3]][b3] 16 ~f[13][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[3]lt[4]] 1 i[box[2]][b0] 2 i[box[2]][b1] 4 i[box[2]][b2] 8 i[box[2]][b3] -1 i[box[3]][b0] -2 i[box[3]][b1] -4 i[box[3]][b2] -8 i[box[3]][b3] 16 f[13][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[3]gt[5]] -1 i[box[2]][b0] -2 i[box[2]][b1] -4 i[box[2]][b2] -8 i[box[2]][b3] 1 i[box[4]][b0] 2 i[box[4]][b1] 4 i[box[4]][b2] 8 i[box[4]][b3] 16 ~f[14][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[3]lt[5]] 1 i[box[2]][b0] 2 i[box[2]][b1] 4 i[box[2]][b2] 8 i[box[2]][b3] -1 i[box[4]][b0] -2 i[box[4]][b1] -4 i[box[4]][b2] -8 i[box[4]][b3] 16 f[14][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[3]gt[6]] -1 i[box[2]][b0] -2 i[box[2]][b1] -4 i[box[2]][b2] -8 i[box[2]][b3] 1 i[box[5]][b0] 2 i[box[5]][b1] 4 i[box[5]][b2] 8 i[box[5]][b3] 16 ~f[15][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[3]lt[6]] 1 i[box[2]][b0] 2 i[box[2]][b1] 4 i[box[2]][b2] 8 i[box[2]][b3] -1 i[box[5]][b0] -2 i[box[5]][b1] -4 i[box[5]][b2] -8 i[box[5]][b3] 16 f[15][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[3]gt[7]] -1 i[box[2]][b0] -2 i[box[2]][b1] -4 i[box[2]][b2] -8 i[box[2]][b3] 1 i[box[6]][b0] 2 i[box[6]][b1] 4 i[box[6]][b2] 8 i[box[6]][b3] 16 ~f[16][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[3]lt[7]] 1 i[box[2]][b0] 2 i[box[2]][b1] 4 i[box[2]][b2] 8 i[box[2]][b3] -1 i[box[6]][b0] -2 i[box[6]][b1] -4 i[box[6]][b2] -8 i[box[6]][b3] 16 f[16][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[3]gt[8]] -1 i[box[2]][b0] -2 i[box[2]][b1] -4 i[box[2]][b2] -8 i[box[2]][b3] 1 i[box[7]][b0] 2 i[box[7]][b1] 4 i[box[7]][b2] 8 i[box[7]][b3] 16 ~f[17][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[3]lt[8]] 1 i[box[2]][b0] 2 i[box[2]][b1] 4 i[box[2]][b2] 8 i[box[2]][b3] -1 i[box[7]][b0] -2 i[box[7]][b1] -4 i[box[7]][b2] -8 i[box[7]][b3] 16 f[17][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[4]gt[5]] -1 i[box[3]][b0] -2 i[box[3]][b1] -4 i[box[3]][b2] -8 i[box[3]][b3] 1 i[box[4]][b0] 2 i[box[4]][b1] 4 i[box[4]][b2] 8 i[box[4]][b3] 16 ~f[18][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[4]lt[5]] 1 i[box[3]][b0] 2 i[box[3]][b1] 4 i[box[3]][b2] 8 i[box[3]][b3] -1 i[box[4]][b0] -2 i[box[4]][b1] -4 i[box[4]][b2] -8 i[box[4]][b3] 16 f[18][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[4]gt[6]] -1 i[box[3]][b0] -2 i[box[3]][b1] -4 i[box[3]][b2] -8 i[box[3]][b3] 1 i[box[5]][b0] 2 i[box[5]][b1] 4 i[box[5]][b2] 8 i[box[5]][b3] 16 ~f[19][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[4]lt[6]] 1 i[box[3]][b0] 2 i[box[3]][b1] 4 i[box[3]][b2] 8 i[box[3]][b3] -1 i[box[5]][b0] -2 i[box[5]][b1] -4 i[box[5]][b2] -8 i[box[5]][b3] 16 f[19][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[4]gt[7]] -1 i[box[3]][b0] -2 i[box[3]][b1] -4 i[box[3]][b2] -8 i[box[3]][b3] 1 i[box[6]][b0] 2 i[box[6]][b1] 4 i[box[6]][b2] 8 i[box[6]][b3] 16 ~f[20][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[4]lt[7]] 1 i[box[3]][b0] 2 i[box[3]][b1] 4 i[box[3]][b2] 8 i[box[3]][b3] -1 i[box[6]][b0] -2 i[box[6]][b1] -4 i[box[6]][b2] -8 i[box[6]][b3] 16 f[20][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[4]gt[8]] -1 i[box[3]][b0] -2 i[box[3]][b1] -4 i[box[3]][b2] -8 i[box[3]][b3] 1 i[box[7]][b0] 2 i[box[7]][b1] 4 i[box[7]][b2] 8 i[box[7]][b3] 16 ~f[21][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[4]lt[8]] 1 i[box[3]][b0] 2 i[box[3]][b1] 4 i[box[3]][b2] 8 i[box[3]][b3] -1 i[box[7]][b0] -2 i[box[7]][b1] -4 i[box[7]][b2] -8 i[box[7]][b3] 16 f[21][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[5]gt[6]] -1 i[box[4]][b0] -2 i[box[4]][b1] -4 i[box[4]][b2] -8 i[box[4]][b3] 1 i[box[5]][b0] 2 i[box[5]][b1] 4 i[box[5]][b2] 8 i[box[5]][b3] 16 ~f[22][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[5]lt[6]] 1 i[box[4]][b0] 2 i[box[4]][b1] 4 i[box[4]][b2] 8 i[box[4]][b3] -1 i[box[5]][b0] -2 i[box[5]][b1] -4 i[box[5]][b2] -8 i[box[5]][b3] 16 f[22][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[5]gt[7]] -1 i[box[4]][b0] -2 i[box[4]][b1] -4 i[box[4]][b2] -8 i[box[4]][b3] 1 i[box[6]][b0] 2 i[box[6]][b1] 4 i[box[6]][b2] 8 i[box[6]][b3] 16 ~f[23][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[5]lt[7]] 1 i[box[4]][b0] 2 i[box[4]][b1] 4 i[box[4]][b2] 8 i[box[4]][b3] -1 i[box[6]][b0] -2 i[box[6]][b1] -4 i[box[6]][b2] -8 i[box[6]][b3] 16 f[23][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[5]gt[8]] -1 i[box[4]][b0] -2 i[box[4]][b1] -4 i[box[4]][b2] -8 i[box[4]][b3] 1 i[box[7]][b0] 2 i[box[7]][b1] 4 i[box[7]][b2] 8 i[box[7]][b3] 16 ~f[24][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[5]lt[8]] 1 i[box[4]][b0] 2 i[box[4]][b1] 4 i[box[4]][b2] 8 i[box[4]][b3] -1 i[box[7]][b0] -2 i[box[7]][b1] -4 i[box[7]][b2] -8 i[box[7]][b3] 16 f[24][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[6]gt[7]] -1 i[box[5]][b0] -2 i[box[5]][b1] -4 i[box[5]][b2] -8 i[box[5]][b3] 1 i[box[6]][b0] 2 i[box[6]][b1] 4 i[box[6]][b2] 8 i[box[6]][b3] 16 ~f[25][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[6]lt[7]] 1 i[box[5]][b0] 2 i[box[5]][b1] 4 i[box[5]][b2] 8 i[box[5]][b3] -1 i[box[6]][b0] -2 i[box[6]][b1] -4 i[box[6]][b2] -8 i[box[6]][b3] 16 f[25][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[6]gt[8]] -1 i[box[5]][b0] -2 i[box[5]][b1] -4 i[box[5]][b2] -8 i[box[5]][b3] 1 i[box[7]][b0] 2 i[box[7]][b1] 4 i[box[7]][b2] 8 i[box[7]][b3] 16 ~f[26][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[6]lt[8]] 1 i[box[5]][b0] 2 i[box[5]][b1] 4 i[box[5]][b2] 8 i[box[5]][b3] -1 i[box[7]][b0] -2 i[box[7]][b1] -4 i[box[7]][b2] -8 i[box[7]][b3] 16 f[26][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[cmad][[7]gt[8]] -1 i[box[6]][b0] -2 i[box[6]][b1] -4 i[box[6]][b2] -8 i[box[6]][b3] 1 i[box[7]][b0] 2 i[box[7]][b1] 4 i[box[7]][b2] 8 i[box[7]][b3] 16 ~f[27][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[cmad][[7]lt[8]] 1 i[box[6]][b0] 2 i[box[6]][b1] 4 i[box[6]][b2] 8 i[box[6]][b3] -1 i[box[7]][b0] -2 i[box[7]][b1] -4 i[box[7]][b2] -8 i[box[7]][b3] 16 f[27][notequals] >= 1;
+* constraint ReifiedEquals greater option
+@c[cmneq_p0_0_1][gt] -8 i[diff0_1][sign] 1 i[diff0_1][b0] 2 i[diff0_1][b1] 4 i[diff0_1][b2] 9 ~f[28][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[cmneq_p0_0_1][lt] 8 i[diff0_1][sign] -1 i[diff0_1][b0] -2 i[diff0_1][b1] -4 i[diff0_1][b2] 8 f[28][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[cmneq_p1_0_1][gt] -8 i[diff0_1][sign] 1 i[diff0_1][b0] 2 i[diff0_1][b1] 4 i[diff0_1][b2] 10 ~f[29][ne] >= 2;
+* constraint ReifiedEquals less option
+@c[cmneq_p1_0_1][lt] 8 i[diff0_1][sign] -1 i[diff0_1][b0] -2 i[diff0_1][b1] -4 i[diff0_1][b2] 8 f[29][ne] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_m1_0_1][gt] -8 i[diff0_1][sign] 1 i[diff0_1][b0] 2 i[diff0_1][b1] 4 i[diff0_1][b2] 9 ~f[30][ne] >= 0;
+* constraint ReifiedEquals less option
+@c[cmneq_m1_0_1][lt] 8 i[diff0_1][sign] -1 i[diff0_1][b0] -2 i[diff0_1][b1] -4 i[diff0_1][b2] 9 f[30][ne] >= 2;
+* constraint ReifiedLinearEquality unconditional sum
+@c[cmleq_0_1][le] -1 i[box[0]][b0] -2 i[box[0]][b1] -4 i[box[0]][b2] -8 i[box[0]][b3] 1 i[box[1]][b0] 2 i[box[1]][b1] 4 i[box[1]][b2] 8 i[box[1]][b3] -8 i[diff0_1][sign] 1 i[diff0_1][b0] 2 i[diff0_1][b1] 4 i[diff0_1][b2] >= 0;
+@c[cmleq_0_1][ge] 1 i[box[0]][b0] 2 i[box[0]][b1] 4 i[box[0]][b2] 8 i[box[0]][b3] -1 i[box[1]][b0] -2 i[box[1]][b1] -4 i[box[1]][b2] -8 i[box[1]][b3] 8 i[diff0_1][sign] -1 i[diff0_1][b0] -2 i[diff0_1][b1] -4 i[diff0_1][b2] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_p0_0_2][gt] -8 i[diff0_2][sign] 1 i[diff0_2][b0] 2 i[diff0_2][b1] 4 i[diff0_2][b2] 9 ~f[31][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[cmneq_p0_0_2][lt] 8 i[diff0_2][sign] -1 i[diff0_2][b0] -2 i[diff0_2][b1] -4 i[diff0_2][b2] 8 f[31][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[cmneq_p1_0_2][gt] -8 i[diff0_2][sign] 1 i[diff0_2][b0] 2 i[diff0_2][b1] 4 i[diff0_2][b2] 10 ~f[32][ne] >= 2;
+* constraint ReifiedEquals less option
+@c[cmneq_p1_0_2][lt] 8 i[diff0_2][sign] -1 i[diff0_2][b0] -2 i[diff0_2][b1] -4 i[diff0_2][b2] 8 f[32][ne] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_m1_0_2][gt] -8 i[diff0_2][sign] 1 i[diff0_2][b0] 2 i[diff0_2][b1] 4 i[diff0_2][b2] 9 ~f[33][ne] >= 0;
+* constraint ReifiedEquals less option
+@c[cmneq_m1_0_2][lt] 8 i[diff0_2][sign] -1 i[diff0_2][b0] -2 i[diff0_2][b1] -4 i[diff0_2][b2] 9 f[33][ne] >= 2;
+* constraint ReifiedLinearEquality unconditional sum
+@c[cmleq_0_2][le] -1 i[box[0]][b0] -2 i[box[0]][b1] -4 i[box[0]][b2] -8 i[box[0]][b3] 1 i[box[2]][b0] 2 i[box[2]][b1] 4 i[box[2]][b2] 8 i[box[2]][b3] -8 i[diff0_2][sign] 1 i[diff0_2][b0] 2 i[diff0_2][b1] 4 i[diff0_2][b2] >= 0;
+@c[cmleq_0_2][ge] 1 i[box[0]][b0] 2 i[box[0]][b1] 4 i[box[0]][b2] 8 i[box[0]][b3] -1 i[box[2]][b0] -2 i[box[2]][b1] -4 i[box[2]][b2] -8 i[box[2]][b3] 8 i[diff0_2][sign] -1 i[diff0_2][b0] -2 i[diff0_2][b1] -4 i[diff0_2][b2] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_p0_0_3][gt] -8 i[diff0_3][sign] 1 i[diff0_3][b0] 2 i[diff0_3][b1] 4 i[diff0_3][b2] 9 ~f[34][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[cmneq_p0_0_3][lt] 8 i[diff0_3][sign] -1 i[diff0_3][b0] -2 i[diff0_3][b1] -4 i[diff0_3][b2] 8 f[34][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[cmneq_p1_0_3][gt] -8 i[diff0_3][sign] 1 i[diff0_3][b0] 2 i[diff0_3][b1] 4 i[diff0_3][b2] 10 ~f[35][ne] >= 2;
+* constraint ReifiedEquals less option
+@c[cmneq_p1_0_3][lt] 8 i[diff0_3][sign] -1 i[diff0_3][b0] -2 i[diff0_3][b1] -4 i[diff0_3][b2] 8 f[35][ne] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_m1_0_3][gt] -8 i[diff0_3][sign] 1 i[diff0_3][b0] 2 i[diff0_3][b1] 4 i[diff0_3][b2] 9 ~f[36][ne] >= 0;
+* constraint ReifiedEquals less option
+@c[cmneq_m1_0_3][lt] 8 i[diff0_3][sign] -1 i[diff0_3][b0] -2 i[diff0_3][b1] -4 i[diff0_3][b2] 9 f[36][ne] >= 2;
+* constraint ReifiedLinearEquality unconditional sum
+@c[cmleq_0_3][le] -1 i[box[0]][b0] -2 i[box[0]][b1] -4 i[box[0]][b2] -8 i[box[0]][b3] 1 i[box[3]][b0] 2 i[box[3]][b1] 4 i[box[3]][b2] 8 i[box[3]][b3] -8 i[diff0_3][sign] 1 i[diff0_3][b0] 2 i[diff0_3][b1] 4 i[diff0_3][b2] >= 0;
+@c[cmleq_0_3][ge] 1 i[box[0]][b0] 2 i[box[0]][b1] 4 i[box[0]][b2] 8 i[box[0]][b3] -1 i[box[3]][b0] -2 i[box[3]][b1] -4 i[box[3]][b2] -8 i[box[3]][b3] 8 i[diff0_3][sign] -1 i[diff0_3][b0] -2 i[diff0_3][b1] -4 i[diff0_3][b2] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_p0_0_4][gt] -8 i[diff0_4][sign] 1 i[diff0_4][b0] 2 i[diff0_4][b1] 4 i[diff0_4][b2] 9 ~f[37][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[cmneq_p0_0_4][lt] 8 i[diff0_4][sign] -1 i[diff0_4][b0] -2 i[diff0_4][b1] -4 i[diff0_4][b2] 8 f[37][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[cmneq_p1_0_4][gt] -8 i[diff0_4][sign] 1 i[diff0_4][b0] 2 i[diff0_4][b1] 4 i[diff0_4][b2] 10 ~f[38][ne] >= 2;
+* constraint ReifiedEquals less option
+@c[cmneq_p1_0_4][lt] 8 i[diff0_4][sign] -1 i[diff0_4][b0] -2 i[diff0_4][b1] -4 i[diff0_4][b2] 8 f[38][ne] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_m1_0_4][gt] -8 i[diff0_4][sign] 1 i[diff0_4][b0] 2 i[diff0_4][b1] 4 i[diff0_4][b2] 9 ~f[39][ne] >= 0;
+* constraint ReifiedEquals less option
+@c[cmneq_m1_0_4][lt] 8 i[diff0_4][sign] -1 i[diff0_4][b0] -2 i[diff0_4][b1] -4 i[diff0_4][b2] 9 f[39][ne] >= 2;
+* constraint ReifiedLinearEquality unconditional sum
+@c[cmleq_0_4][le] -1 i[box[0]][b0] -2 i[box[0]][b1] -4 i[box[0]][b2] -8 i[box[0]][b3] 1 i[box[4]][b0] 2 i[box[4]][b1] 4 i[box[4]][b2] 8 i[box[4]][b3] -8 i[diff0_4][sign] 1 i[diff0_4][b0] 2 i[diff0_4][b1] 4 i[diff0_4][b2] >= 0;
+@c[cmleq_0_4][ge] 1 i[box[0]][b0] 2 i[box[0]][b1] 4 i[box[0]][b2] 8 i[box[0]][b3] -1 i[box[4]][b0] -2 i[box[4]][b1] -4 i[box[4]][b2] -8 i[box[4]][b3] 8 i[diff0_4][sign] -1 i[diff0_4][b0] -2 i[diff0_4][b1] -4 i[diff0_4][b2] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_p0_1_3][gt] -8 i[diff1_3][sign] 1 i[diff1_3][b0] 2 i[diff1_3][b1] 4 i[diff1_3][b2] 9 ~f[40][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[cmneq_p0_1_3][lt] 8 i[diff1_3][sign] -1 i[diff1_3][b0] -2 i[diff1_3][b1] -4 i[diff1_3][b2] 8 f[40][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[cmneq_p1_1_3][gt] -8 i[diff1_3][sign] 1 i[diff1_3][b0] 2 i[diff1_3][b1] 4 i[diff1_3][b2] 10 ~f[41][ne] >= 2;
+* constraint ReifiedEquals less option
+@c[cmneq_p1_1_3][lt] 8 i[diff1_3][sign] -1 i[diff1_3][b0] -2 i[diff1_3][b1] -4 i[diff1_3][b2] 8 f[41][ne] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_m1_1_3][gt] -8 i[diff1_3][sign] 1 i[diff1_3][b0] 2 i[diff1_3][b1] 4 i[diff1_3][b2] 9 ~f[42][ne] >= 0;
+* constraint ReifiedEquals less option
+@c[cmneq_m1_1_3][lt] 8 i[diff1_3][sign] -1 i[diff1_3][b0] -2 i[diff1_3][b1] -4 i[diff1_3][b2] 9 f[42][ne] >= 2;
+* constraint ReifiedLinearEquality unconditional sum
+@c[cmleq_1_3][le] -1 i[box[1]][b0] -2 i[box[1]][b1] -4 i[box[1]][b2] -8 i[box[1]][b3] 1 i[box[3]][b0] 2 i[box[3]][b1] 4 i[box[3]][b2] 8 i[box[3]][b3] -8 i[diff1_3][sign] 1 i[diff1_3][b0] 2 i[diff1_3][b1] 4 i[diff1_3][b2] >= 0;
+@c[cmleq_1_3][ge] 1 i[box[1]][b0] 2 i[box[1]][b1] 4 i[box[1]][b2] 8 i[box[1]][b3] -1 i[box[3]][b0] -2 i[box[3]][b1] -4 i[box[3]][b2] -8 i[box[3]][b3] 8 i[diff1_3][sign] -1 i[diff1_3][b0] -2 i[diff1_3][b1] -4 i[diff1_3][b2] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_p0_1_4][gt] -8 i[diff1_4][sign] 1 i[diff1_4][b0] 2 i[diff1_4][b1] 4 i[diff1_4][b2] 9 ~f[43][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[cmneq_p0_1_4][lt] 8 i[diff1_4][sign] -1 i[diff1_4][b0] -2 i[diff1_4][b1] -4 i[diff1_4][b2] 8 f[43][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[cmneq_p1_1_4][gt] -8 i[diff1_4][sign] 1 i[diff1_4][b0] 2 i[diff1_4][b1] 4 i[diff1_4][b2] 10 ~f[44][ne] >= 2;
+* constraint ReifiedEquals less option
+@c[cmneq_p1_1_4][lt] 8 i[diff1_4][sign] -1 i[diff1_4][b0] -2 i[diff1_4][b1] -4 i[diff1_4][b2] 8 f[44][ne] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_m1_1_4][gt] -8 i[diff1_4][sign] 1 i[diff1_4][b0] 2 i[diff1_4][b1] 4 i[diff1_4][b2] 9 ~f[45][ne] >= 0;
+* constraint ReifiedEquals less option
+@c[cmneq_m1_1_4][lt] 8 i[diff1_4][sign] -1 i[diff1_4][b0] -2 i[diff1_4][b1] -4 i[diff1_4][b2] 9 f[45][ne] >= 2;
+* constraint ReifiedLinearEquality unconditional sum
+@c[cmleq_1_4][le] -1 i[box[1]][b0] -2 i[box[1]][b1] -4 i[box[1]][b2] -8 i[box[1]][b3] 1 i[box[4]][b0] 2 i[box[4]][b1] 4 i[box[4]][b2] 8 i[box[4]][b3] -8 i[diff1_4][sign] 1 i[diff1_4][b0] 2 i[diff1_4][b1] 4 i[diff1_4][b2] >= 0;
+@c[cmleq_1_4][ge] 1 i[box[1]][b0] 2 i[box[1]][b1] 4 i[box[1]][b2] 8 i[box[1]][b3] -1 i[box[4]][b0] -2 i[box[4]][b1] -4 i[box[4]][b2] -8 i[box[4]][b3] 8 i[diff1_4][sign] -1 i[diff1_4][b0] -2 i[diff1_4][b1] -4 i[diff1_4][b2] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_p0_1_5][gt] -8 i[diff1_5][sign] 1 i[diff1_5][b0] 2 i[diff1_5][b1] 4 i[diff1_5][b2] 9 ~f[46][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[cmneq_p0_1_5][lt] 8 i[diff1_5][sign] -1 i[diff1_5][b0] -2 i[diff1_5][b1] -4 i[diff1_5][b2] 8 f[46][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[cmneq_p1_1_5][gt] -8 i[diff1_5][sign] 1 i[diff1_5][b0] 2 i[diff1_5][b1] 4 i[diff1_5][b2] 10 ~f[47][ne] >= 2;
+* constraint ReifiedEquals less option
+@c[cmneq_p1_1_5][lt] 8 i[diff1_5][sign] -1 i[diff1_5][b0] -2 i[diff1_5][b1] -4 i[diff1_5][b2] 8 f[47][ne] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_m1_1_5][gt] -8 i[diff1_5][sign] 1 i[diff1_5][b0] 2 i[diff1_5][b1] 4 i[diff1_5][b2] 9 ~f[48][ne] >= 0;
+* constraint ReifiedEquals less option
+@c[cmneq_m1_1_5][lt] 8 i[diff1_5][sign] -1 i[diff1_5][b0] -2 i[diff1_5][b1] -4 i[diff1_5][b2] 9 f[48][ne] >= 2;
+* constraint ReifiedLinearEquality unconditional sum
+@c[cmleq_1_5][le] -1 i[box[1]][b0] -2 i[box[1]][b1] -4 i[box[1]][b2] -8 i[box[1]][b3] 1 i[box[5]][b0] 2 i[box[5]][b1] 4 i[box[5]][b2] 8 i[box[5]][b3] -8 i[diff1_5][sign] 1 i[diff1_5][b0] 2 i[diff1_5][b1] 4 i[diff1_5][b2] >= 0;
+@c[cmleq_1_5][ge] 1 i[box[1]][b0] 2 i[box[1]][b1] 4 i[box[1]][b2] 8 i[box[1]][b3] -1 i[box[5]][b0] -2 i[box[5]][b1] -4 i[box[5]][b2] -8 i[box[5]][b3] 8 i[diff1_5][sign] -1 i[diff1_5][b0] -2 i[diff1_5][b1] -4 i[diff1_5][b2] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_p0_2_3][gt] -8 i[diff2_3][sign] 1 i[diff2_3][b0] 2 i[diff2_3][b1] 4 i[diff2_3][b2] 9 ~f[49][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[cmneq_p0_2_3][lt] 8 i[diff2_3][sign] -1 i[diff2_3][b0] -2 i[diff2_3][b1] -4 i[diff2_3][b2] 8 f[49][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[cmneq_p1_2_3][gt] -8 i[diff2_3][sign] 1 i[diff2_3][b0] 2 i[diff2_3][b1] 4 i[diff2_3][b2] 10 ~f[50][ne] >= 2;
+* constraint ReifiedEquals less option
+@c[cmneq_p1_2_3][lt] 8 i[diff2_3][sign] -1 i[diff2_3][b0] -2 i[diff2_3][b1] -4 i[diff2_3][b2] 8 f[50][ne] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_m1_2_3][gt] -8 i[diff2_3][sign] 1 i[diff2_3][b0] 2 i[diff2_3][b1] 4 i[diff2_3][b2] 9 ~f[51][ne] >= 0;
+* constraint ReifiedEquals less option
+@c[cmneq_m1_2_3][lt] 8 i[diff2_3][sign] -1 i[diff2_3][b0] -2 i[diff2_3][b1] -4 i[diff2_3][b2] 9 f[51][ne] >= 2;
+* constraint ReifiedLinearEquality unconditional sum
+@c[cmleq_2_3][le] -1 i[box[2]][b0] -2 i[box[2]][b1] -4 i[box[2]][b2] -8 i[box[2]][b3] 1 i[box[3]][b0] 2 i[box[3]][b1] 4 i[box[3]][b2] 8 i[box[3]][b3] -8 i[diff2_3][sign] 1 i[diff2_3][b0] 2 i[diff2_3][b1] 4 i[diff2_3][b2] >= 0;
+@c[cmleq_2_3][ge] 1 i[box[2]][b0] 2 i[box[2]][b1] 4 i[box[2]][b2] 8 i[box[2]][b3] -1 i[box[3]][b0] -2 i[box[3]][b1] -4 i[box[3]][b2] -8 i[box[3]][b3] 8 i[diff2_3][sign] -1 i[diff2_3][b0] -2 i[diff2_3][b1] -4 i[diff2_3][b2] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_p0_2_6][gt] -8 i[diff2_6][sign] 1 i[diff2_6][b0] 2 i[diff2_6][b1] 4 i[diff2_6][b2] 9 ~f[52][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[cmneq_p0_2_6][lt] 8 i[diff2_6][sign] -1 i[diff2_6][b0] -2 i[diff2_6][b1] -4 i[diff2_6][b2] 8 f[52][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[cmneq_p1_2_6][gt] -8 i[diff2_6][sign] 1 i[diff2_6][b0] 2 i[diff2_6][b1] 4 i[diff2_6][b2] 10 ~f[53][ne] >= 2;
+* constraint ReifiedEquals less option
+@c[cmneq_p1_2_6][lt] 8 i[diff2_6][sign] -1 i[diff2_6][b0] -2 i[diff2_6][b1] -4 i[diff2_6][b2] 8 f[53][ne] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_m1_2_6][gt] -8 i[diff2_6][sign] 1 i[diff2_6][b0] 2 i[diff2_6][b1] 4 i[diff2_6][b2] 9 ~f[54][ne] >= 0;
+* constraint ReifiedEquals less option
+@c[cmneq_m1_2_6][lt] 8 i[diff2_6][sign] -1 i[diff2_6][b0] -2 i[diff2_6][b1] -4 i[diff2_6][b2] 9 f[54][ne] >= 2;
+* constraint ReifiedLinearEquality unconditional sum
+@c[cmleq_2_6][le] -1 i[box[2]][b0] -2 i[box[2]][b1] -4 i[box[2]][b2] -8 i[box[2]][b3] 1 i[box[6]][b0] 2 i[box[6]][b1] 4 i[box[6]][b2] 8 i[box[6]][b3] -8 i[diff2_6][sign] 1 i[diff2_6][b0] 2 i[diff2_6][b1] 4 i[diff2_6][b2] >= 0;
+@c[cmleq_2_6][ge] 1 i[box[2]][b0] 2 i[box[2]][b1] 4 i[box[2]][b2] 8 i[box[2]][b3] -1 i[box[6]][b0] -2 i[box[6]][b1] -4 i[box[6]][b2] -8 i[box[6]][b3] 8 i[diff2_6][sign] -1 i[diff2_6][b0] -2 i[diff2_6][b1] -4 i[diff2_6][b2] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_p0_3_4][gt] -8 i[diff3_4][sign] 1 i[diff3_4][b0] 2 i[diff3_4][b1] 4 i[diff3_4][b2] 9 ~f[55][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[cmneq_p0_3_4][lt] 8 i[diff3_4][sign] -1 i[diff3_4][b0] -2 i[diff3_4][b1] -4 i[diff3_4][b2] 8 f[55][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[cmneq_p1_3_4][gt] -8 i[diff3_4][sign] 1 i[diff3_4][b0] 2 i[diff3_4][b1] 4 i[diff3_4][b2] 10 ~f[56][ne] >= 2;
+* constraint ReifiedEquals less option
+@c[cmneq_p1_3_4][lt] 8 i[diff3_4][sign] -1 i[diff3_4][b0] -2 i[diff3_4][b1] -4 i[diff3_4][b2] 8 f[56][ne] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_m1_3_4][gt] -8 i[diff3_4][sign] 1 i[diff3_4][b0] 2 i[diff3_4][b1] 4 i[diff3_4][b2] 9 ~f[57][ne] >= 0;
+* constraint ReifiedEquals less option
+@c[cmneq_m1_3_4][lt] 8 i[diff3_4][sign] -1 i[diff3_4][b0] -2 i[diff3_4][b1] -4 i[diff3_4][b2] 9 f[57][ne] >= 2;
+* constraint ReifiedLinearEquality unconditional sum
+@c[cmleq_3_4][le] -1 i[box[3]][b0] -2 i[box[3]][b1] -4 i[box[3]][b2] -8 i[box[3]][b3] 1 i[box[4]][b0] 2 i[box[4]][b1] 4 i[box[4]][b2] 8 i[box[4]][b3] -8 i[diff3_4][sign] 1 i[diff3_4][b0] 2 i[diff3_4][b1] 4 i[diff3_4][b2] >= 0;
+@c[cmleq_3_4][ge] 1 i[box[3]][b0] 2 i[box[3]][b1] 4 i[box[3]][b2] 8 i[box[3]][b3] -1 i[box[4]][b0] -2 i[box[4]][b1] -4 i[box[4]][b2] -8 i[box[4]][b3] 8 i[diff3_4][sign] -1 i[diff3_4][b0] -2 i[diff3_4][b1] -4 i[diff3_4][b2] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_p0_3_6][gt] -8 i[diff3_6][sign] 1 i[diff3_6][b0] 2 i[diff3_6][b1] 4 i[diff3_6][b2] 9 ~f[58][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[cmneq_p0_3_6][lt] 8 i[diff3_6][sign] -1 i[diff3_6][b0] -2 i[diff3_6][b1] -4 i[diff3_6][b2] 8 f[58][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[cmneq_p1_3_6][gt] -8 i[diff3_6][sign] 1 i[diff3_6][b0] 2 i[diff3_6][b1] 4 i[diff3_6][b2] 10 ~f[59][ne] >= 2;
+* constraint ReifiedEquals less option
+@c[cmneq_p1_3_6][lt] 8 i[diff3_6][sign] -1 i[diff3_6][b0] -2 i[diff3_6][b1] -4 i[diff3_6][b2] 8 f[59][ne] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_m1_3_6][gt] -8 i[diff3_6][sign] 1 i[diff3_6][b0] 2 i[diff3_6][b1] 4 i[diff3_6][b2] 9 ~f[60][ne] >= 0;
+* constraint ReifiedEquals less option
+@c[cmneq_m1_3_6][lt] 8 i[diff3_6][sign] -1 i[diff3_6][b0] -2 i[diff3_6][b1] -4 i[diff3_6][b2] 9 f[60][ne] >= 2;
+* constraint ReifiedLinearEquality unconditional sum
+@c[cmleq_3_6][le] -1 i[box[3]][b0] -2 i[box[3]][b1] -4 i[box[3]][b2] -8 i[box[3]][b3] 1 i[box[6]][b0] 2 i[box[6]][b1] 4 i[box[6]][b2] 8 i[box[6]][b3] -8 i[diff3_6][sign] 1 i[diff3_6][b0] 2 i[diff3_6][b1] 4 i[diff3_6][b2] >= 0;
+@c[cmleq_3_6][ge] 1 i[box[3]][b0] 2 i[box[3]][b1] 4 i[box[3]][b2] 8 i[box[3]][b3] -1 i[box[6]][b0] -2 i[box[6]][b1] -4 i[box[6]][b2] -8 i[box[6]][b3] 8 i[diff3_6][sign] -1 i[diff3_6][b0] -2 i[diff3_6][b1] -4 i[diff3_6][b2] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_p0_3_7][gt] -8 i[diff3_7][sign] 1 i[diff3_7][b0] 2 i[diff3_7][b1] 4 i[diff3_7][b2] 9 ~f[61][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[cmneq_p0_3_7][lt] 8 i[diff3_7][sign] -1 i[diff3_7][b0] -2 i[diff3_7][b1] -4 i[diff3_7][b2] 8 f[61][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[cmneq_p1_3_7][gt] -8 i[diff3_7][sign] 1 i[diff3_7][b0] 2 i[diff3_7][b1] 4 i[diff3_7][b2] 10 ~f[62][ne] >= 2;
+* constraint ReifiedEquals less option
+@c[cmneq_p1_3_7][lt] 8 i[diff3_7][sign] -1 i[diff3_7][b0] -2 i[diff3_7][b1] -4 i[diff3_7][b2] 8 f[62][ne] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_m1_3_7][gt] -8 i[diff3_7][sign] 1 i[diff3_7][b0] 2 i[diff3_7][b1] 4 i[diff3_7][b2] 9 ~f[63][ne] >= 0;
+* constraint ReifiedEquals less option
+@c[cmneq_m1_3_7][lt] 8 i[diff3_7][sign] -1 i[diff3_7][b0] -2 i[diff3_7][b1] -4 i[diff3_7][b2] 9 f[63][ne] >= 2;
+* constraint ReifiedLinearEquality unconditional sum
+@c[cmleq_3_7][le] -1 i[box[3]][b0] -2 i[box[3]][b1] -4 i[box[3]][b2] -8 i[box[3]][b3] 1 i[box[7]][b0] 2 i[box[7]][b1] 4 i[box[7]][b2] 8 i[box[7]][b3] -8 i[diff3_7][sign] 1 i[diff3_7][b0] 2 i[diff3_7][b1] 4 i[diff3_7][b2] >= 0;
+@c[cmleq_3_7][ge] 1 i[box[3]][b0] 2 i[box[3]][b1] 4 i[box[3]][b2] 8 i[box[3]][b3] -1 i[box[7]][b0] -2 i[box[7]][b1] -4 i[box[7]][b2] -8 i[box[7]][b3] 8 i[diff3_7][sign] -1 i[diff3_7][b0] -2 i[diff3_7][b1] -4 i[diff3_7][b2] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_p0_4_5][gt] -8 i[diff4_5][sign] 1 i[diff4_5][b0] 2 i[diff4_5][b1] 4 i[diff4_5][b2] 9 ~f[64][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[cmneq_p0_4_5][lt] 8 i[diff4_5][sign] -1 i[diff4_5][b0] -2 i[diff4_5][b1] -4 i[diff4_5][b2] 8 f[64][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[cmneq_p1_4_5][gt] -8 i[diff4_5][sign] 1 i[diff4_5][b0] 2 i[diff4_5][b1] 4 i[diff4_5][b2] 10 ~f[65][ne] >= 2;
+* constraint ReifiedEquals less option
+@c[cmneq_p1_4_5][lt] 8 i[diff4_5][sign] -1 i[diff4_5][b0] -2 i[diff4_5][b1] -4 i[diff4_5][b2] 8 f[65][ne] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_m1_4_5][gt] -8 i[diff4_5][sign] 1 i[diff4_5][b0] 2 i[diff4_5][b1] 4 i[diff4_5][b2] 9 ~f[66][ne] >= 0;
+* constraint ReifiedEquals less option
+@c[cmneq_m1_4_5][lt] 8 i[diff4_5][sign] -1 i[diff4_5][b0] -2 i[diff4_5][b1] -4 i[diff4_5][b2] 9 f[66][ne] >= 2;
+* constraint ReifiedLinearEquality unconditional sum
+@c[cmleq_4_5][le] -1 i[box[4]][b0] -2 i[box[4]][b1] -4 i[box[4]][b2] -8 i[box[4]][b3] 1 i[box[5]][b0] 2 i[box[5]][b1] 4 i[box[5]][b2] 8 i[box[5]][b3] -8 i[diff4_5][sign] 1 i[diff4_5][b0] 2 i[diff4_5][b1] 4 i[diff4_5][b2] >= 0;
+@c[cmleq_4_5][ge] 1 i[box[4]][b0] 2 i[box[4]][b1] 4 i[box[4]][b2] 8 i[box[4]][b3] -1 i[box[5]][b0] -2 i[box[5]][b1] -4 i[box[5]][b2] -8 i[box[5]][b3] 8 i[diff4_5][sign] -1 i[diff4_5][b0] -2 i[diff4_5][b1] -4 i[diff4_5][b2] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_p0_4_6][gt] -8 i[diff4_6][sign] 1 i[diff4_6][b0] 2 i[diff4_6][b1] 4 i[diff4_6][b2] 9 ~f[67][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[cmneq_p0_4_6][lt] 8 i[diff4_6][sign] -1 i[diff4_6][b0] -2 i[diff4_6][b1] -4 i[diff4_6][b2] 8 f[67][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[cmneq_p1_4_6][gt] -8 i[diff4_6][sign] 1 i[diff4_6][b0] 2 i[diff4_6][b1] 4 i[diff4_6][b2] 10 ~f[68][ne] >= 2;
+* constraint ReifiedEquals less option
+@c[cmneq_p1_4_6][lt] 8 i[diff4_6][sign] -1 i[diff4_6][b0] -2 i[diff4_6][b1] -4 i[diff4_6][b2] 8 f[68][ne] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_m1_4_6][gt] -8 i[diff4_6][sign] 1 i[diff4_6][b0] 2 i[diff4_6][b1] 4 i[diff4_6][b2] 9 ~f[69][ne] >= 0;
+* constraint ReifiedEquals less option
+@c[cmneq_m1_4_6][lt] 8 i[diff4_6][sign] -1 i[diff4_6][b0] -2 i[diff4_6][b1] -4 i[diff4_6][b2] 9 f[69][ne] >= 2;
+* constraint ReifiedLinearEquality unconditional sum
+@c[cmleq_4_6][le] -1 i[box[4]][b0] -2 i[box[4]][b1] -4 i[box[4]][b2] -8 i[box[4]][b3] 1 i[box[6]][b0] 2 i[box[6]][b1] 4 i[box[6]][b2] 8 i[box[6]][b3] -8 i[diff4_6][sign] 1 i[diff4_6][b0] 2 i[diff4_6][b1] 4 i[diff4_6][b2] >= 0;
+@c[cmleq_4_6][ge] 1 i[box[4]][b0] 2 i[box[4]][b1] 4 i[box[4]][b2] 8 i[box[4]][b3] -1 i[box[6]][b0] -2 i[box[6]][b1] -4 i[box[6]][b2] -8 i[box[6]][b3] 8 i[diff4_6][sign] -1 i[diff4_6][b0] -2 i[diff4_6][b1] -4 i[diff4_6][b2] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_p0_4_7][gt] -8 i[diff4_7][sign] 1 i[diff4_7][b0] 2 i[diff4_7][b1] 4 i[diff4_7][b2] 9 ~f[70][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[cmneq_p0_4_7][lt] 8 i[diff4_7][sign] -1 i[diff4_7][b0] -2 i[diff4_7][b1] -4 i[diff4_7][b2] 8 f[70][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[cmneq_p1_4_7][gt] -8 i[diff4_7][sign] 1 i[diff4_7][b0] 2 i[diff4_7][b1] 4 i[diff4_7][b2] 10 ~f[71][ne] >= 2;
+* constraint ReifiedEquals less option
+@c[cmneq_p1_4_7][lt] 8 i[diff4_7][sign] -1 i[diff4_7][b0] -2 i[diff4_7][b1] -4 i[diff4_7][b2] 8 f[71][ne] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_m1_4_7][gt] -8 i[diff4_7][sign] 1 i[diff4_7][b0] 2 i[diff4_7][b1] 4 i[diff4_7][b2] 9 ~f[72][ne] >= 0;
+* constraint ReifiedEquals less option
+@c[cmneq_m1_4_7][lt] 8 i[diff4_7][sign] -1 i[diff4_7][b0] -2 i[diff4_7][b1] -4 i[diff4_7][b2] 9 f[72][ne] >= 2;
+* constraint ReifiedLinearEquality unconditional sum
+@c[cmleq_4_7][le] -1 i[box[4]][b0] -2 i[box[4]][b1] -4 i[box[4]][b2] -8 i[box[4]][b3] 1 i[box[7]][b0] 2 i[box[7]][b1] 4 i[box[7]][b2] 8 i[box[7]][b3] -8 i[diff4_7][sign] 1 i[diff4_7][b0] 2 i[diff4_7][b1] 4 i[diff4_7][b2] >= 0;
+@c[cmleq_4_7][ge] 1 i[box[4]][b0] 2 i[box[4]][b1] 4 i[box[4]][b2] 8 i[box[4]][b3] -1 i[box[7]][b0] -2 i[box[7]][b1] -4 i[box[7]][b2] -8 i[box[7]][b3] 8 i[diff4_7][sign] -1 i[diff4_7][b0] -2 i[diff4_7][b1] -4 i[diff4_7][b2] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_p0_5_7][gt] -8 i[diff5_7][sign] 1 i[diff5_7][b0] 2 i[diff5_7][b1] 4 i[diff5_7][b2] 9 ~f[73][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[cmneq_p0_5_7][lt] 8 i[diff5_7][sign] -1 i[diff5_7][b0] -2 i[diff5_7][b1] -4 i[diff5_7][b2] 8 f[73][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[cmneq_p1_5_7][gt] -8 i[diff5_7][sign] 1 i[diff5_7][b0] 2 i[diff5_7][b1] 4 i[diff5_7][b2] 10 ~f[74][ne] >= 2;
+* constraint ReifiedEquals less option
+@c[cmneq_p1_5_7][lt] 8 i[diff5_7][sign] -1 i[diff5_7][b0] -2 i[diff5_7][b1] -4 i[diff5_7][b2] 8 f[74][ne] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_m1_5_7][gt] -8 i[diff5_7][sign] 1 i[diff5_7][b0] 2 i[diff5_7][b1] 4 i[diff5_7][b2] 9 ~f[75][ne] >= 0;
+* constraint ReifiedEquals less option
+@c[cmneq_m1_5_7][lt] 8 i[diff5_7][sign] -1 i[diff5_7][b0] -2 i[diff5_7][b1] -4 i[diff5_7][b2] 9 f[75][ne] >= 2;
+* constraint ReifiedLinearEquality unconditional sum
+@c[cmleq_5_7][le] -1 i[box[5]][b0] -2 i[box[5]][b1] -4 i[box[5]][b2] -8 i[box[5]][b3] 1 i[box[7]][b0] 2 i[box[7]][b1] 4 i[box[7]][b2] 8 i[box[7]][b3] -8 i[diff5_7][sign] 1 i[diff5_7][b0] 2 i[diff5_7][b1] 4 i[diff5_7][b2] >= 0;
+@c[cmleq_5_7][ge] 1 i[box[5]][b0] 2 i[box[5]][b1] 4 i[box[5]][b2] 8 i[box[5]][b3] -1 i[box[7]][b0] -2 i[box[7]][b1] -4 i[box[7]][b2] -8 i[box[7]][b3] 8 i[diff5_7][sign] -1 i[diff5_7][b0] -2 i[diff5_7][b1] -4 i[diff5_7][b2] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_p0_6_7][gt] -8 i[diff6_7][sign] 1 i[diff6_7][b0] 2 i[diff6_7][b1] 4 i[diff6_7][b2] 9 ~f[76][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[cmneq_p0_6_7][lt] 8 i[diff6_7][sign] -1 i[diff6_7][b0] -2 i[diff6_7][b1] -4 i[diff6_7][b2] 8 f[76][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[cmneq_p1_6_7][gt] -8 i[diff6_7][sign] 1 i[diff6_7][b0] 2 i[diff6_7][b1] 4 i[diff6_7][b2] 10 ~f[77][ne] >= 2;
+* constraint ReifiedEquals less option
+@c[cmneq_p1_6_7][lt] 8 i[diff6_7][sign] -1 i[diff6_7][b0] -2 i[diff6_7][b1] -4 i[diff6_7][b2] 8 f[77][ne] >= 0;
+* constraint ReifiedEquals greater option
+@c[cmneq_m1_6_7][gt] -8 i[diff6_7][sign] 1 i[diff6_7][b0] 2 i[diff6_7][b1] 4 i[diff6_7][b2] 9 ~f[78][ne] >= 0;
+* constraint ReifiedEquals less option
+@c[cmneq_m1_6_7][lt] 8 i[diff6_7][sign] -1 i[diff6_7][b0] -2 i[diff6_7][b1] -4 i[diff6_7][b2] 9 f[78][ne] >= 2;
+* constraint ReifiedLinearEquality unconditional sum
+@c[cmleq_6_7][le] -1 i[box[6]][b0] -2 i[box[6]][b1] -4 i[box[6]][b2] -8 i[box[6]][b3] 1 i[box[7]][b0] 2 i[box[7]][b1] 4 i[box[7]][b2] 8 i[box[7]][b3] -8 i[diff6_7][sign] 1 i[diff6_7][b0] 2 i[diff6_7][b1] 4 i[diff6_7][b2] >= 0;
+@c[cmleq_6_7][ge] 1 i[box[6]][b0] 2 i[box[6]][b1] 4 i[box[6]][b2] 8 i[box[6]][b3] -1 i[box[7]][b0] -2 i[box[7]][b1] -4 i[box[7]][b2] -8 i[box[7]][b3] 8 i[diff6_7][sign] -1 i[diff6_7][b0] -2 i[diff6_7][b1] -4 i[diff6_7][b2] >= 0;

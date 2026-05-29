@@ -1,0 +1,133 @@
+* #variable= 32 #constraint= 74
+preserved: i[s][b0] i[s][b1] i[s][b2] i[s][b3] i[e][b0] i[e][b1] i[e][b2] i[e][b3] i[n][b0] i[n][b1] i[n][b2] i[n][b3] i[d][b0] i[d][b1] i[d][b2] i[d][b3] i[m][b0] i[m][b1] i[m][b2] i[m][b3] i[o][b0] i[o][b1] i[o][b2] i[o][b3] i[r][b0] i[r][b1] i[r][b2] i[r][b3] i[y][b0] i[y][b1] i[y][b2] i[y][b3] ;
+1 i[s][b0] 2 i[s][b1] 4 i[s][b2] 8 i[s][b3] >= 1 ;
+-1 i[s][b0] -2 i[s][b1] -4 i[s][b2] -8 i[s][b3] >= -9 ;
+1 i[e][b0] 2 i[e][b1] 4 i[e][b2] 8 i[e][b3] >= 0 ;
+-1 i[e][b0] -2 i[e][b1] -4 i[e][b2] -8 i[e][b3] >= -9 ;
+1 i[n][b0] 2 i[n][b1] 4 i[n][b2] 8 i[n][b3] >= 0 ;
+-1 i[n][b0] -2 i[n][b1] -4 i[n][b2] -8 i[n][b3] >= -9 ;
+1 i[d][b0] 2 i[d][b1] 4 i[d][b2] 8 i[d][b3] >= 0 ;
+-1 i[d][b0] -2 i[d][b1] -4 i[d][b2] -8 i[d][b3] >= -9 ;
+1 i[m][b0] 2 i[m][b1] 4 i[m][b2] 8 i[m][b3] >= 1 ;
+-1 i[m][b0] -2 i[m][b1] -4 i[m][b2] -8 i[m][b3] >= -9 ;
+1 i[o][b0] 2 i[o][b1] 4 i[o][b2] 8 i[o][b3] >= 0 ;
+-1 i[o][b0] -2 i[o][b1] -4 i[o][b2] -8 i[o][b3] >= -9 ;
+1 i[r][b0] 2 i[r][b1] 4 i[r][b2] 8 i[r][b3] >= 0 ;
+-1 i[r][b0] -2 i[r][b1] -4 i[r][b2] -8 i[r][b3] >= -9 ;
+1 i[y][b0] 2 i[y][b1] 4 i[y][b2] 8 i[y][b3] >= 0 ;
+-1 i[y][b0] -2 i[y][b1] -4 i[y][b2] -8 i[y][b3] >= -9 ;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[1]gt[2]] -1 i[s][b0] -2 i[s][b1] -4 i[s][b2] -8 i[s][b3] 1 i[e][b0] 2 i[e][b1] 4 i[e][b2] 8 i[e][b3] 16 ~f[0][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[1]lt[2]] 1 i[s][b0] 2 i[s][b1] 4 i[s][b2] 8 i[s][b3] -1 i[e][b0] -2 i[e][b1] -4 i[e][b2] -8 i[e][b3] 16 f[0][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[1]gt[3]] -1 i[s][b0] -2 i[s][b1] -4 i[s][b2] -8 i[s][b3] 1 i[n][b0] 2 i[n][b1] 4 i[n][b2] 8 i[n][b3] 16 ~f[1][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[1]lt[3]] 1 i[s][b0] 2 i[s][b1] 4 i[s][b2] 8 i[s][b3] -1 i[n][b0] -2 i[n][b1] -4 i[n][b2] -8 i[n][b3] 16 f[1][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[1]gt[4]] -1 i[s][b0] -2 i[s][b1] -4 i[s][b2] -8 i[s][b3] 1 i[d][b0] 2 i[d][b1] 4 i[d][b2] 8 i[d][b3] 16 ~f[2][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[1]lt[4]] 1 i[s][b0] 2 i[s][b1] 4 i[s][b2] 8 i[s][b3] -1 i[d][b0] -2 i[d][b1] -4 i[d][b2] -8 i[d][b3] 16 f[2][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[1]gt[5]] -1 i[s][b0] -2 i[s][b1] -4 i[s][b2] -8 i[s][b3] 1 i[m][b0] 2 i[m][b1] 4 i[m][b2] 8 i[m][b3] 16 ~f[3][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[1]lt[5]] 1 i[s][b0] 2 i[s][b1] 4 i[s][b2] 8 i[s][b3] -1 i[m][b0] -2 i[m][b1] -4 i[m][b2] -8 i[m][b3] 16 f[3][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[1]gt[6]] -1 i[s][b0] -2 i[s][b1] -4 i[s][b2] -8 i[s][b3] 1 i[o][b0] 2 i[o][b1] 4 i[o][b2] 8 i[o][b3] 16 ~f[4][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[1]lt[6]] 1 i[s][b0] 2 i[s][b1] 4 i[s][b2] 8 i[s][b3] -1 i[o][b0] -2 i[o][b1] -4 i[o][b2] -8 i[o][b3] 16 f[4][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[1]gt[7]] -1 i[s][b0] -2 i[s][b1] -4 i[s][b2] -8 i[s][b3] 1 i[r][b0] 2 i[r][b1] 4 i[r][b2] 8 i[r][b3] 16 ~f[5][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[1]lt[7]] 1 i[s][b0] 2 i[s][b1] 4 i[s][b2] 8 i[s][b3] -1 i[r][b0] -2 i[r][b1] -4 i[r][b2] -8 i[r][b3] 16 f[5][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[1]gt[8]] -1 i[s][b0] -2 i[s][b1] -4 i[s][b2] -8 i[s][b3] 1 i[y][b0] 2 i[y][b1] 4 i[y][b2] 8 i[y][b3] 16 ~f[6][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[1]lt[8]] 1 i[s][b0] 2 i[s][b1] 4 i[s][b2] 8 i[s][b3] -1 i[y][b0] -2 i[y][b1] -4 i[y][b2] -8 i[y][b3] 16 f[6][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[2]gt[3]] -1 i[e][b0] -2 i[e][b1] -4 i[e][b2] -8 i[e][b3] 1 i[n][b0] 2 i[n][b1] 4 i[n][b2] 8 i[n][b3] 16 ~f[7][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[2]lt[3]] 1 i[e][b0] 2 i[e][b1] 4 i[e][b2] 8 i[e][b3] -1 i[n][b0] -2 i[n][b1] -4 i[n][b2] -8 i[n][b3] 16 f[7][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[2]gt[4]] -1 i[e][b0] -2 i[e][b1] -4 i[e][b2] -8 i[e][b3] 1 i[d][b0] 2 i[d][b1] 4 i[d][b2] 8 i[d][b3] 16 ~f[8][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[2]lt[4]] 1 i[e][b0] 2 i[e][b1] 4 i[e][b2] 8 i[e][b3] -1 i[d][b0] -2 i[d][b1] -4 i[d][b2] -8 i[d][b3] 16 f[8][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[2]gt[5]] -1 i[e][b0] -2 i[e][b1] -4 i[e][b2] -8 i[e][b3] 1 i[m][b0] 2 i[m][b1] 4 i[m][b2] 8 i[m][b3] 16 ~f[9][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[2]lt[5]] 1 i[e][b0] 2 i[e][b1] 4 i[e][b2] 8 i[e][b3] -1 i[m][b0] -2 i[m][b1] -4 i[m][b2] -8 i[m][b3] 16 f[9][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[2]gt[6]] -1 i[e][b0] -2 i[e][b1] -4 i[e][b2] -8 i[e][b3] 1 i[o][b0] 2 i[o][b1] 4 i[o][b2] 8 i[o][b3] 16 ~f[10][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[2]lt[6]] 1 i[e][b0] 2 i[e][b1] 4 i[e][b2] 8 i[e][b3] -1 i[o][b0] -2 i[o][b1] -4 i[o][b2] -8 i[o][b3] 16 f[10][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[2]gt[7]] -1 i[e][b0] -2 i[e][b1] -4 i[e][b2] -8 i[e][b3] 1 i[r][b0] 2 i[r][b1] 4 i[r][b2] 8 i[r][b3] 16 ~f[11][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[2]lt[7]] 1 i[e][b0] 2 i[e][b1] 4 i[e][b2] 8 i[e][b3] -1 i[r][b0] -2 i[r][b1] -4 i[r][b2] -8 i[r][b3] 16 f[11][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[2]gt[8]] -1 i[e][b0] -2 i[e][b1] -4 i[e][b2] -8 i[e][b3] 1 i[y][b0] 2 i[y][b1] 4 i[y][b2] 8 i[y][b3] 16 ~f[12][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[2]lt[8]] 1 i[e][b0] 2 i[e][b1] 4 i[e][b2] 8 i[e][b3] -1 i[y][b0] -2 i[y][b1] -4 i[y][b2] -8 i[y][b3] 16 f[12][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[3]gt[4]] -1 i[n][b0] -2 i[n][b1] -4 i[n][b2] -8 i[n][b3] 1 i[d][b0] 2 i[d][b1] 4 i[d][b2] 8 i[d][b3] 16 ~f[13][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[3]lt[4]] 1 i[n][b0] 2 i[n][b1] 4 i[n][b2] 8 i[n][b3] -1 i[d][b0] -2 i[d][b1] -4 i[d][b2] -8 i[d][b3] 16 f[13][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[3]gt[5]] -1 i[n][b0] -2 i[n][b1] -4 i[n][b2] -8 i[n][b3] 1 i[m][b0] 2 i[m][b1] 4 i[m][b2] 8 i[m][b3] 16 ~f[14][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[3]lt[5]] 1 i[n][b0] 2 i[n][b1] 4 i[n][b2] 8 i[n][b3] -1 i[m][b0] -2 i[m][b1] -4 i[m][b2] -8 i[m][b3] 16 f[14][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[3]gt[6]] -1 i[n][b0] -2 i[n][b1] -4 i[n][b2] -8 i[n][b3] 1 i[o][b0] 2 i[o][b1] 4 i[o][b2] 8 i[o][b3] 16 ~f[15][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[3]lt[6]] 1 i[n][b0] 2 i[n][b1] 4 i[n][b2] 8 i[n][b3] -1 i[o][b0] -2 i[o][b1] -4 i[o][b2] -8 i[o][b3] 16 f[15][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[3]gt[7]] -1 i[n][b0] -2 i[n][b1] -4 i[n][b2] -8 i[n][b3] 1 i[r][b0] 2 i[r][b1] 4 i[r][b2] 8 i[r][b3] 16 ~f[16][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[3]lt[7]] 1 i[n][b0] 2 i[n][b1] 4 i[n][b2] 8 i[n][b3] -1 i[r][b0] -2 i[r][b1] -4 i[r][b2] -8 i[r][b3] 16 f[16][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[3]gt[8]] -1 i[n][b0] -2 i[n][b1] -4 i[n][b2] -8 i[n][b3] 1 i[y][b0] 2 i[y][b1] 4 i[y][b2] 8 i[y][b3] 16 ~f[17][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[3]lt[8]] 1 i[n][b0] 2 i[n][b1] 4 i[n][b2] 8 i[n][b3] -1 i[y][b0] -2 i[y][b1] -4 i[y][b2] -8 i[y][b3] 16 f[17][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[4]gt[5]] -1 i[d][b0] -2 i[d][b1] -4 i[d][b2] -8 i[d][b3] 1 i[m][b0] 2 i[m][b1] 4 i[m][b2] 8 i[m][b3] 16 ~f[18][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[4]lt[5]] 1 i[d][b0] 2 i[d][b1] 4 i[d][b2] 8 i[d][b3] -1 i[m][b0] -2 i[m][b1] -4 i[m][b2] -8 i[m][b3] 16 f[18][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[4]gt[6]] -1 i[d][b0] -2 i[d][b1] -4 i[d][b2] -8 i[d][b3] 1 i[o][b0] 2 i[o][b1] 4 i[o][b2] 8 i[o][b3] 16 ~f[19][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[4]lt[6]] 1 i[d][b0] 2 i[d][b1] 4 i[d][b2] 8 i[d][b3] -1 i[o][b0] -2 i[o][b1] -4 i[o][b2] -8 i[o][b3] 16 f[19][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[4]gt[7]] -1 i[d][b0] -2 i[d][b1] -4 i[d][b2] -8 i[d][b3] 1 i[r][b0] 2 i[r][b1] 4 i[r][b2] 8 i[r][b3] 16 ~f[20][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[4]lt[7]] 1 i[d][b0] 2 i[d][b1] 4 i[d][b2] 8 i[d][b3] -1 i[r][b0] -2 i[r][b1] -4 i[r][b2] -8 i[r][b3] 16 f[20][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[4]gt[8]] -1 i[d][b0] -2 i[d][b1] -4 i[d][b2] -8 i[d][b3] 1 i[y][b0] 2 i[y][b1] 4 i[y][b2] 8 i[y][b3] 16 ~f[21][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[4]lt[8]] 1 i[d][b0] 2 i[d][b1] 4 i[d][b2] 8 i[d][b3] -1 i[y][b0] -2 i[y][b1] -4 i[y][b2] -8 i[y][b3] 16 f[21][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[5]gt[6]] -1 i[m][b0] -2 i[m][b1] -4 i[m][b2] -8 i[m][b3] 1 i[o][b0] 2 i[o][b1] 4 i[o][b2] 8 i[o][b3] 16 ~f[22][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[5]lt[6]] 1 i[m][b0] 2 i[m][b1] 4 i[m][b2] 8 i[m][b3] -1 i[o][b0] -2 i[o][b1] -4 i[o][b2] -8 i[o][b3] 16 f[22][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[5]gt[7]] -1 i[m][b0] -2 i[m][b1] -4 i[m][b2] -8 i[m][b3] 1 i[r][b0] 2 i[r][b1] 4 i[r][b2] 8 i[r][b3] 16 ~f[23][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[5]lt[7]] 1 i[m][b0] 2 i[m][b1] 4 i[m][b2] 8 i[m][b3] -1 i[r][b0] -2 i[r][b1] -4 i[r][b2] -8 i[r][b3] 16 f[23][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[5]gt[8]] -1 i[m][b0] -2 i[m][b1] -4 i[m][b2] -8 i[m][b3] 1 i[y][b0] 2 i[y][b1] 4 i[y][b2] 8 i[y][b3] 16 ~f[24][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[5]lt[8]] 1 i[m][b0] 2 i[m][b1] 4 i[m][b2] 8 i[m][b3] -1 i[y][b0] -2 i[y][b1] -4 i[y][b2] -8 i[y][b3] 16 f[24][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[6]gt[7]] -1 i[o][b0] -2 i[o][b1] -4 i[o][b2] -8 i[o][b3] 1 i[r][b0] 2 i[r][b1] 4 i[r][b2] 8 i[r][b3] 16 ~f[25][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[6]lt[7]] 1 i[o][b0] 2 i[o][b1] 4 i[o][b2] 8 i[o][b3] -1 i[r][b0] -2 i[r][b1] -4 i[r][b2] -8 i[r][b3] 16 f[25][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[6]gt[8]] -1 i[o][b0] -2 i[o][b1] -4 i[o][b2] -8 i[o][b3] 1 i[y][b0] 2 i[y][b1] 4 i[y][b2] 8 i[y][b3] 16 ~f[26][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[6]lt[8]] 1 i[o][b0] 2 i[o][b1] 4 i[o][b2] 8 i[o][b3] -1 i[y][b0] -2 i[y][b1] -4 i[y][b2] -8 i[y][b3] 16 f[26][notequals] >= 1;
+* constraint AllDifferent not equals because lower
+@c[money_a_d][[7]gt[8]] -1 i[r][b0] -2 i[r][b1] -4 i[r][b2] -8 i[r][b3] 1 i[y][b0] 2 i[y][b1] 4 i[y][b2] 8 i[y][b3] 16 ~f[27][notequals] >= 1;
+* constraint AllDifferent not equals because higher
+@c[money_a_d][[7]lt[8]] 1 i[r][b0] 2 i[r][b1] 4 i[r][b2] 8 i[r][b3] -1 i[y][b0] -2 i[y][b1] -4 i[y][b2] -8 i[y][b3] 16 f[27][notequals] >= 1;
+* constraint ReifiedLinearEquality unconditional sum
+@c[money_sum][le] -1000 i[s][b0] -2000 i[s][b1] -4000 i[s][b2] -8000 i[s][b3] -100 i[e][b0] -200 i[e][b1] -400 i[e][b2] -800 i[e][b3] -10 i[n][b0] -20 i[n][b1] -40 i[n][b2] -80 i[n][b3] -1 i[d][b0] -2 i[d][b1] -4 i[d][b2] -8 i[d][b3] -1000 i[m][b0] -2000 i[m][b1] -4000 i[m][b2] -8000 i[m][b3] -100 i[o][b0] -200 i[o][b1] -400 i[o][b2] -800 i[o][b3] -10 i[r][b0] -20 i[r][b1] -40 i[r][b2] -80 i[r][b3] -1 i[e][b0] -2 i[e][b1] -4 i[e][b2] -8 i[e][b3] 10000 i[m][b0] 20000 i[m][b1] 40000 i[m][b2] 80000 i[m][b3] 1000 i[o][b0] 2000 i[o][b1] 4000 i[o][b2] 8000 i[o][b3] 100 i[n][b0] 200 i[n][b1] 400 i[n][b2] 800 i[n][b3] 10 i[e][b0] 20 i[e][b1] 40 i[e][b2] 80 i[e][b3] 1 i[y][b0] 2 i[y][b1] 4 i[y][b2] 8 i[y][b3] >= 0;
+@c[money_sum][ge] 1000 i[s][b0] 2000 i[s][b1] 4000 i[s][b2] 8000 i[s][b3] 100 i[e][b0] 200 i[e][b1] 400 i[e][b2] 800 i[e][b3] 10 i[n][b0] 20 i[n][b1] 40 i[n][b2] 80 i[n][b3] 1 i[d][b0] 2 i[d][b1] 4 i[d][b2] 8 i[d][b3] 1000 i[m][b0] 2000 i[m][b1] 4000 i[m][b2] 8000 i[m][b3] 100 i[o][b0] 200 i[o][b1] 400 i[o][b2] 800 i[o][b3] 10 i[r][b0] 20 i[r][b1] 40 i[r][b2] 80 i[r][b3] 1 i[e][b0] 2 i[e][b1] 4 i[e][b2] 8 i[e][b3] -10000 i[m][b0] -20000 i[m][b1] -40000 i[m][b2] -80000 i[m][b3] -1000 i[o][b0] -2000 i[o][b1] -4000 i[o][b2] -8000 i[o][b3] -100 i[n][b0] -200 i[n][b1] -400 i[n][b2] -800 i[n][b3] -10 i[e][b0] -20 i[e][b1] -40 i[e][b2] -80 i[e][b3] -1 i[y][b0] -2 i[y][b1] -4 i[y][b2] -8 i[y][b3] >= 0;
