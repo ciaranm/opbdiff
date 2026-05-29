@@ -45,7 +45,7 @@ Documented v1 limitations:
   surfaced rather than silently equated. This is deliberate, since
   spotting them is part of the use-case; a future opt-in flag may add
   scoped aliasing.
-- Only the plain-text reporter ships; colour, JSON, and side-by-side
+- Plain-text and colour-aware reporters ship; JSON and side-by-side
   are sketched in
   [`dev_docs/0005-output-formats.md`](dev_docs/0005-output-formats.md).
 
@@ -67,11 +67,12 @@ opbdiff [OPTIONS] <A> <B>
 
 Options:
 
-| Flag                       | Effect                                        |
-|----------------------------|-----------------------------------------------|
-| `-u`, `--unordered`        | Compare constraints as multisets (ignore order). |
-| `-L`, `--check-labels`     | Enforce reference-side labels on the candidate. |
-| `-r`, `--reference <A\|B>` | Which side is the label reference (default `B`). |
+| Flag                          | Effect                                                          |
+|-------------------------------|-----------------------------------------------------------------|
+| `-u`, `--unordered`           | Compare constraints as multisets (ignore order).                |
+| `-L`, `--check-labels`        | Enforce reference-side labels on the candidate.                 |
+| `-r`, `--reference <A\|B>`    | Which side is the label reference (default `B`).                |
+| `--color <auto\|always\|never>` | When to emit ANSI colour. `auto` honours TTY and `NO_COLOR`.   |
 
 Exit codes:
 

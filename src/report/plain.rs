@@ -1,13 +1,36 @@
-//! Plain-text reporter: maximally portable, pipeable, no styling.
+//! Plain-text reporter, optionally ANSI-coloured.
 //!
-//! Writes to any `std::io::Write`. The output shape is intentionally
-//! line-oriented and easy to grep.
+//! The reporter unconditionally emits ANSI SGR escape sequences. Whether
+//! the user actually sees colour is decided by the stream the binary
+//! writes through: `anstream::AutoStream` strips the codes when the
+//! destination is not a TTY (or when the user passed `--color=never`),
+//! and keeps them when it is. Tests that compare against substrings
+//! still work, because the substrings are present *between* the SGR
+//! pairs.
 
 use std::io;
+
+use anstyle::{AnsiColor, Color, Style};
 
 use crate::compare::{
     CompareMode, ConstraintDiff, DiffResult, ObjectiveDiff, PreservedDiff, ReferenceSide,
 };
+
+// ---- styles -----------------------------------------------------------
+
+const HEADING: Style = Style::new().bold();
+const A_LINE: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Red)));
+const B_LINE: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
+const A_HEAD: Style = A_LINE.bold();
+const B_HEAD: Style = B_LINE.bold();
+const LABEL_HEAD: Style = Style::new()
+    .fg_color(Some(Color::Ansi(AnsiColor::Yellow)))
+    .bold();
+const SUCCESS: Style = Style::new()
+    .fg_color(Some(Color::Ansi(AnsiColor::Green)))
+    .bold();
+
+// ---- entry point ------------------------------------------------------
 
 pub fn write(out: &mut dyn io::Write, diff: &DiffResult) -> io::Result<()> {
     let mut wrote_any_diff = false;
@@ -29,7 +52,7 @@ pub fn write(out: &mut dyn io::Write, diff: &DiffResult) -> io::Result<()> {
         writeln!(out)?;
         write!(
             out,
-            "Summary ({mode}): {m} matches, {d} differing, {a} only in A, {b} only in B",
+            "{HEADING}Summary ({mode}): {m} matches, {d} differing, {a} only in A, {b} only in B",
             mode = mode_label(diff.mode),
             m = summary.matches,
             d = summary.differing,
@@ -48,11 +71,11 @@ pub fn write(out: &mut dyn io::Write, diff: &DiffResult) -> io::Result<()> {
         if summary.preserved_difference {
             write!(out, ", preserved differs")?;
         }
-        writeln!(out, ".")?;
+        writeln!(out, ".{HEADING:#}")?;
     } else {
         writeln!(
             out,
-            "Files are semantically equivalent ({} constraints compared, {mode}).",
+            "{SUCCESS}Files are semantically equivalent ({} constraints compared, {mode}).{SUCCESS:#}",
             summary.matches,
             mode = mode_label(diff.mode),
         )?;
@@ -68,23 +91,25 @@ fn mode_label(mode: CompareMode) -> &'static str {
     }
 }
 
+// ---- per-section writers ---------------------------------------------
+
 fn write_objective(out: &mut dyn io::Write, o: &ObjectiveDiff) -> io::Result<Option<()>> {
     match o {
         ObjectiveDiff::BothAbsent | ObjectiveDiff::Match => Ok(None),
         ObjectiveDiff::Differ { a, b } => {
-            writeln!(out, "Objectives differ:")?;
-            writeln!(out, "  A: {}", a.raw.trim())?;
-            writeln!(out, "  B: {}", b.raw.trim())?;
+            writeln!(out, "{HEADING}Objectives differ:{HEADING:#}")?;
+            writeln!(out, "{A_LINE}  A: {}{A_LINE:#}", a.raw.trim())?;
+            writeln!(out, "{B_LINE}  B: {}{B_LINE:#}", b.raw.trim())?;
             Ok(Some(()))
         }
         ObjectiveDiff::OnlyInA(a) => {
-            writeln!(out, "Objective only in A:")?;
-            writeln!(out, "  A: {}", a.raw.trim())?;
+            writeln!(out, "{A_HEAD}Objective only in A:{A_HEAD:#}")?;
+            writeln!(out, "{A_LINE}  A: {}{A_LINE:#}", a.raw.trim())?;
             Ok(Some(()))
         }
         ObjectiveDiff::OnlyInB(b) => {
-            writeln!(out, "Objective only in B:")?;
-            writeln!(out, "  B: {}", b.raw.trim())?;
+            writeln!(out, "{B_HEAD}Objective only in B:{B_HEAD:#}")?;
+            writeln!(out, "{B_LINE}  B: {}{B_LINE:#}", b.raw.trim())?;
             Ok(Some(()))
         }
     }
@@ -94,19 +119,19 @@ fn write_preserved(out: &mut dyn io::Write, p: &PreservedDiff) -> io::Result<Opt
     match p {
         PreservedDiff::BothAbsent | PreservedDiff::Match => Ok(None),
         PreservedDiff::Differ { a, b } => {
-            writeln!(out, "Preserved lines differ:")?;
-            writeln!(out, "  A: {}", a.raw.trim())?;
-            writeln!(out, "  B: {}", b.raw.trim())?;
+            writeln!(out, "{HEADING}Preserved lines differ:{HEADING:#}")?;
+            writeln!(out, "{A_LINE}  A: {}{A_LINE:#}", a.raw.trim())?;
+            writeln!(out, "{B_LINE}  B: {}{B_LINE:#}", b.raw.trim())?;
             Ok(Some(()))
         }
         PreservedDiff::OnlyInA(a) => {
-            writeln!(out, "Preserved only in A:")?;
-            writeln!(out, "  A: {}", a.raw.trim())?;
+            writeln!(out, "{A_HEAD}Preserved only in A:{A_HEAD:#}")?;
+            writeln!(out, "{A_LINE}  A: {}{A_LINE:#}", a.raw.trim())?;
             Ok(Some(()))
         }
         PreservedDiff::OnlyInB(b) => {
-            writeln!(out, "Preserved only in B:")?;
-            writeln!(out, "  B: {}", b.raw.trim())?;
+            writeln!(out, "{B_HEAD}Preserved only in B:{B_HEAD:#}")?;
+            writeln!(out, "{B_LINE}  B: {}{B_LINE:#}", b.raw.trim())?;
             Ok(Some(()))
         }
     }
@@ -126,17 +151,16 @@ fn write_constraint(
             a,
             b,
         } => {
-            // Differ only happens in ordered mode, so index_a == index_b.
             let _ = (mode, index_b);
             writeln!(
                 out,
-                "Differing at constraint #{} (A line {}, B line {}):",
+                "{HEADING}Differing at constraint #{} (A line {}, B line {}):{HEADING:#}",
                 index_a + 1,
                 a.line,
                 b.line,
             )?;
-            writeln!(out, "  A: {}", a.raw.trim())?;
-            writeln!(out, "  B: {}", b.raw.trim())?;
+            writeln!(out, "{A_LINE}  A: {}{A_LINE:#}", a.raw.trim())?;
+            writeln!(out, "{B_LINE}  B: {}{B_LINE:#}", b.raw.trim())?;
             Ok(Some(()))
         }
 
@@ -144,13 +168,15 @@ fn write_constraint(
             match mode {
                 CompareMode::Ordered => writeln!(
                     out,
-                    "Only in A at constraint #{} (A line {}):",
+                    "{A_HEAD}Only in A at constraint #{} (A line {}):{A_HEAD:#}",
                     index + 1,
                     a.line,
                 )?,
-                CompareMode::Unordered => writeln!(out, "Only in A (line {}):", a.line)?,
+                CompareMode::Unordered => {
+                    writeln!(out, "{A_HEAD}Only in A (line {}):{A_HEAD:#}", a.line)?
+                }
             }
-            writeln!(out, "  A: {}", a.raw.trim())?;
+            writeln!(out, "{A_LINE}  A: {}{A_LINE:#}", a.raw.trim())?;
             Ok(Some(()))
         }
 
@@ -158,13 +184,15 @@ fn write_constraint(
             match mode {
                 CompareMode::Ordered => writeln!(
                     out,
-                    "Only in B at constraint #{} (B line {}):",
+                    "{B_HEAD}Only in B at constraint #{} (B line {}):{B_HEAD:#}",
                     index + 1,
                     b.line,
                 )?,
-                CompareMode::Unordered => writeln!(out, "Only in B (line {}):", b.line)?,
+                CompareMode::Unordered => {
+                    writeln!(out, "{B_HEAD}Only in B (line {}):{B_HEAD:#}", b.line)?
+                }
             }
-            writeln!(out, "  B: {}", b.raw.trim())?;
+            writeln!(out, "{B_LINE}  B: {}{B_LINE:#}", b.raw.trim())?;
             Ok(Some(()))
         }
 
@@ -181,14 +209,14 @@ fn write_constraint(
             };
             writeln!(
                 out,
-                "Label mismatch at constraint A#{} / B#{} (reference={ref_side}):",
+                "{LABEL_HEAD}Label mismatch at constraint A#{} / B#{} (reference={ref_side}):{LABEL_HEAD:#}",
                 index_a + 1,
                 index_b + 1,
             )?;
-            writeln!(out, "  expected label: {}", ref_label.unwrap_or("(none)"),)?;
-            writeln!(out, "  actual label:   {}", cand_label.unwrap_or("(none)"),)?;
-            writeln!(out, "  A: {}", a.raw.trim())?;
-            writeln!(out, "  B: {}", b.raw.trim())?;
+            writeln!(out, "  expected label: {}", ref_label.unwrap_or("(none)"))?;
+            writeln!(out, "  actual label:   {}", cand_label.unwrap_or("(none)"))?;
+            writeln!(out, "{A_LINE}  A: {}{A_LINE:#}", a.raw.trim())?;
+            writeln!(out, "{B_LINE}  B: {}{B_LINE:#}", b.raw.trim())?;
             Ok(Some(()))
         }
     }
@@ -222,6 +250,26 @@ mod tests {
         String::from_utf8(buf).unwrap()
     }
 
+    fn strip_ansi(s: &str) -> String {
+        // Crude SGR stripper that's good enough for tests: drop every
+        // ESC ... 'm' sequence.
+        let mut out = String::with_capacity(s.len());
+        let mut chars = s.chars();
+        while let Some(c) = chars.next() {
+            if c == '\x1b' {
+                // skip until we see 'm'
+                for c2 in chars.by_ref() {
+                    if c2 == 'm' {
+                        break;
+                    }
+                }
+            } else {
+                out.push(c);
+            }
+        }
+        out
+    }
+
     #[test]
     fn equivalent_files_print_equivalent_message() {
         let out = render(&diff("1 x1 >= 1 ;\n", "+1 ~x1 <= 0 ;\n"));
@@ -230,50 +278,63 @@ mod tests {
     }
 
     #[test]
-    fn differing_constraint_is_printed_with_originals() {
+    fn output_contains_ansi_when_writing_to_buffer() {
+        // The reporter unconditionally emits SGR codes; the stripping
+        // is done one layer up by AutoStream. So a raw Vec<u8> sink
+        // should see escapes.
         let out = render(&diff("1 x1 >= 1 ;\n", "1 x2 >= 1 ;\n"));
-        assert!(out.contains("Differing at constraint #1"));
-        assert!(out.contains("A: 1 x1 >= 1 ;"));
-        assert!(out.contains("B: 1 x2 >= 1 ;"));
-        assert!(out.contains("Summary (ordered)"));
+        assert!(out.contains("\x1b["), "expected ANSI escapes, got: {out}");
+    }
+
+    #[test]
+    fn differing_constraint_text_survives_ansi_strip() {
+        let out = render(&diff("1 x1 >= 1 ;\n", "1 x2 >= 1 ;\n"));
+        let plain = strip_ansi(&out);
+        assert!(plain.contains("Differing at constraint #1"));
+        assert!(plain.contains("A: 1 x1 >= 1 ;"));
+        assert!(plain.contains("B: 1 x2 >= 1 ;"));
+        assert!(plain.contains("Summary (ordered)"));
     }
 
     #[test]
     fn only_in_a_under_ordered_uses_position() {
-        let out = render(&diff("1 x1 >= 1 ;\n1 x2 >= 1 ;\n", "1 x1 >= 1 ;\n"));
-        assert!(out.contains("Only in A at constraint #2"));
+        let plain = strip_ansi(&render(&diff(
+            "1 x1 >= 1 ;\n1 x2 >= 1 ;\n",
+            "1 x1 >= 1 ;\n",
+        )));
+        assert!(plain.contains("Only in A at constraint #2"));
     }
 
     #[test]
     fn only_in_a_under_unordered_omits_position() {
-        let out = render(&diff_with(
+        let plain = strip_ansi(&render(&diff_with(
             "1 x1 >= 1 ;\n",
             "1 x2 >= 1 ;\n",
             CompareOptions {
                 mode: CompareMode::Unordered,
                 label_check: None,
             },
-        ));
-        assert!(out.contains("Only in A (line"));
-        assert!(out.contains("Only in B (line"));
-        assert!(!out.contains("at constraint #"));
-        assert!(out.contains("Summary (unordered)"));
+        )));
+        assert!(plain.contains("Only in A (line"));
+        assert!(plain.contains("Only in B (line"));
+        assert!(!plain.contains("at constraint #"));
+        assert!(plain.contains("Summary (unordered)"));
     }
 
     #[test]
     fn label_mismatch_is_reported_with_reference_side() {
-        let out = render(&diff_with(
+        let plain = strip_ansi(&render(&diff_with(
             "1 x1 >= 1 ;\n",
             "@card 1 x1 >= 1 ;\n",
             CompareOptions {
                 mode: CompareMode::Ordered,
                 label_check: Some(ReferenceSide::B),
             },
-        ));
-        assert!(out.contains("Label mismatch"));
-        assert!(out.contains("reference=B"));
-        assert!(out.contains("expected label: card"));
-        assert!(out.contains("actual label:   (none)"));
-        assert!(out.contains("1 label mismatch"));
+        )));
+        assert!(plain.contains("Label mismatch"));
+        assert!(plain.contains("reference=B"));
+        assert!(plain.contains("expected label: card"));
+        assert!(plain.contains("actual label:   (none)"));
+        assert!(plain.contains("1 label mismatch"));
     }
 }

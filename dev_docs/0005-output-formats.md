@@ -9,7 +9,12 @@ ones drop in without touching the comparison engine.
 
 ## Status
 
-Stage 1 (plain text) is shipped. Stages 2–4 are not yet implemented.
+Stages 1 and 2 (plain text + colour-aware) are shipped, served by
+the same reporter: the reporter unconditionally emits ANSI SGR codes
+and `anstream::AutoStream` around stdout strips them when not on a
+TTY (or when the user passed `--color=never`). The `NO_COLOR`
+environment variable is honoured automatically. Stages 3 and 4 (JSON
+and side-by-side) are not yet implemented.
 
 ## Stage 1: plain text (v1)
 

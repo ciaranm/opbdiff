@@ -4,6 +4,7 @@
 
 use std::path::PathBuf;
 
+use anstream::ColorChoice as AnstreamColor;
 use clap::{Parser, ValueEnum};
 
 use opbdiff::compare::{CompareMode, CompareOptions, ReferenceSide};
@@ -38,6 +39,13 @@ pub struct Args {
     /// description.
     #[arg(short, long, value_enum, default_value_t = ReferenceArg::B)]
     pub reference: ReferenceArg,
+
+    /// When to emit ANSI colour. `auto` keeps colour for TTY stdout
+    /// and strips it otherwise; the `NO_COLOR` environment variable
+    /// also forces stripping. `always` keeps colour even when piped;
+    /// `never` strips unconditionally.
+    #[arg(long, value_enum, default_value_t = ColorChoiceArg::Auto, value_name = "WHEN")]
+    pub color: ColorChoiceArg,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
@@ -51,6 +59,23 @@ impl From<ReferenceArg> for ReferenceSide {
         match r {
             ReferenceArg::A => ReferenceSide::A,
             ReferenceArg::B => ReferenceSide::B,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
+pub enum ColorChoiceArg {
+    Auto,
+    Always,
+    Never,
+}
+
+impl From<ColorChoiceArg> for AnstreamColor {
+    fn from(c: ColorChoiceArg) -> Self {
+        match c {
+            ColorChoiceArg::Auto => AnstreamColor::Auto,
+            ColorChoiceArg::Always => AnstreamColor::Always,
+            ColorChoiceArg::Never => AnstreamColor::Never,
         }
     }
 }

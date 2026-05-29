@@ -12,6 +12,8 @@ categories = ["command-line-utilities", "development-tools"]
 publish = false
 
 [dependencies]
+anstream = "0.6"
+anstyle = "1"
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 thiserror = "2"

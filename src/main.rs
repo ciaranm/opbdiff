@@ -37,8 +37,9 @@ fn run(args: &cli::Args) -> Result<bool> {
     let diff = compare(&a, &b, args.compare_options());
 
     let stdout = std::io::stdout();
-    let mut handle = stdout.lock();
-    plain::write(&mut handle, &diff).context("writing report")?;
+    let handle = stdout.lock();
+    let mut coloured = anstream::AutoStream::new(handle, args.color.into());
+    plain::write(&mut coloured, &diff).context("writing report")?;
 
     Ok(diff.is_equivalent())
 }
