@@ -7,3 +7,4 @@
 pub mod compare;
 pub mod model;
 pub mod parser;
+pub mod report;
