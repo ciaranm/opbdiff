@@ -15,6 +15,7 @@ use anstyle::{AnsiColor, Color, Style};
 use crate::compare::{
     CompareMode, ConstraintDiff, DiffResult, ObjectiveDiff, PreservedDiff, ReferenceSide,
 };
+use crate::model::CanonicalConstraint;
 
 // ---- styles -----------------------------------------------------------
 
@@ -161,6 +162,7 @@ fn write_constraint(
             )?;
             writeln!(out, "{A_LINE}  A: {}{A_LINE:#}", a.raw.trim())?;
             writeln!(out, "{B_LINE}  B: {}{B_LINE:#}", b.raw.trim())?;
+            write_canonical_diff(out, &a.form, &b.form)?;
             Ok(Some(()))
         }
 
@@ -220,6 +222,144 @@ fn write_constraint(
             Ok(Some(()))
         }
     }
+}
+
+/// Render a sorted, per-variable comparison of two canonical
+/// constraints. Each row shows the variable name and either side's
+/// coefficient (or `(absent)` if one side doesn't reference that
+/// variable). The RHS is shown as a synthetic last row. Rows where
+/// both sides agree are summarised as a count rather than printed
+/// in full, so a 100-term constraint with one differing coefficient
+/// shows one row.
+fn write_canonical_diff(
+    out: &mut dyn io::Write,
+    a: &CanonicalConstraint,
+    b: &CanonicalConstraint,
+) -> io::Result<()> {
+    let rows = collect_canonical_rows(a, b);
+    let differing: Vec<&Row> = rows.iter().filter(|r| r.differs()).collect();
+    let identical_count = rows.len() - differing.len();
+
+    if differing.is_empty() {
+        return Ok(());
+    }
+
+    writeln!(out, "  {HEADING}canonical-form view (sorted):{HEADING:#}",)?;
+
+    let var_width = differing
+        .iter()
+        .map(|r| r.var.chars().count())
+        .max()
+        .unwrap_or(0);
+
+    let a_width = differing
+        .iter()
+        .map(|r| coef_display_len(r.a))
+        .max()
+        .unwrap_or(0);
+
+    for row in &differing {
+        let a_text = format_coef(row.a);
+        let b_text = format_coef(row.b);
+        let a_pad = a_width.saturating_sub(coef_display_len(row.a));
+        writeln!(
+            out,
+            "    {var:<var_width$}   {A_LINE}A={a_text}{A_LINE:#}{pad}   {B_LINE}B={b_text}{B_LINE:#}",
+            var = row.var,
+            pad = " ".repeat(a_pad),
+        )?;
+    }
+
+    if identical_count > 0 {
+        let plural = if identical_count == 1 { "" } else { "s" };
+        writeln!(out, "    ({identical_count} identical row{plural} hidden)",)?;
+    }
+
+    Ok(())
+}
+
+struct Row {
+    var: String,
+    a: Option<i64>,
+    b: Option<i64>,
+}
+
+impl Row {
+    fn differs(&self) -> bool {
+        self.a != self.b
+    }
+}
+
+fn collect_canonical_rows(a: &CanonicalConstraint, b: &CanonicalConstraint) -> Vec<Row> {
+    let mut rows = Vec::with_capacity(a.terms.len() + b.terms.len() + 1);
+    let mut i = 0;
+    let mut j = 0;
+    while i < a.terms.len() && j < b.terms.len() {
+        let (va, ca) = &a.terms[i];
+        let (vb, cb) = &b.terms[j];
+        match va.as_str().cmp(vb.as_str()) {
+            std::cmp::Ordering::Less => {
+                rows.push(Row {
+                    var: va.clone(),
+                    a: Some(*ca),
+                    b: None,
+                });
+                i += 1;
+            }
+            std::cmp::Ordering::Greater => {
+                rows.push(Row {
+                    var: vb.clone(),
+                    a: None,
+                    b: Some(*cb),
+                });
+                j += 1;
+            }
+            std::cmp::Ordering::Equal => {
+                rows.push(Row {
+                    var: va.clone(),
+                    a: Some(*ca),
+                    b: Some(*cb),
+                });
+                i += 1;
+                j += 1;
+            }
+        }
+    }
+    while i < a.terms.len() {
+        let (va, ca) = &a.terms[i];
+        rows.push(Row {
+            var: va.clone(),
+            a: Some(*ca),
+            b: None,
+        });
+        i += 1;
+    }
+    while j < b.terms.len() {
+        let (vb, cb) = &b.terms[j];
+        rows.push(Row {
+            var: vb.clone(),
+            a: None,
+            b: Some(*cb),
+        });
+        j += 1;
+    }
+    rows.push(Row {
+        var: "rhs".to_string(),
+        a: Some(a.rhs),
+        b: Some(b.rhs),
+    });
+    rows
+}
+
+fn format_coef(c: Option<i64>) -> String {
+    match c {
+        Some(n) => format!("{n:+}"),
+        None => "(absent)".to_string(),
+    }
+}
+
+fn coef_display_len(c: Option<i64>) -> usize {
+    format_coef(c).chars().count()
 }
 
 #[cfg(test)]
@@ -319,6 +459,43 @@ mod tests {
         assert!(plain.contains("Only in B (line"));
         assert!(!plain.contains("at constraint #"));
         assert!(plain.contains("Summary (unordered)"));
+    }
+
+    #[test]
+    fn differ_includes_canonical_form_view() {
+        let plain = strip_ansi(&render(&diff(
+            "1 x1 1 x2 1 x3 >= 1 ;\n",
+            "1 x1 2 x2 1 x3 >= 1 ;\n",
+        )));
+        // Should include the canonical-form block listing the
+        // differing term, the rhs only if it differs, and a count of
+        // identical rows.
+        assert!(plain.contains("canonical-form view"), "got: {plain}");
+        assert!(plain.contains("x2"));
+        assert!(plain.contains("A=+1"));
+        assert!(plain.contains("B=+2"));
+        // x1, x3, and rhs all agree → 3 identical rows hidden.
+        assert!(plain.contains("3 identical rows hidden"));
+        // rhs row should not appear when it agrees.
+        assert!(!plain.contains("rhs"));
+    }
+
+    #[test]
+    fn differ_canonical_view_shows_term_only_on_one_side() {
+        // A has x3, B doesn't. B has x4, A doesn't.
+        let plain = strip_ansi(&render(&diff("1 x1 1 x3 >= 1 ;\n", "1 x1 1 x4 >= 1 ;\n")));
+        assert!(plain.contains("x3"));
+        assert!(plain.contains("x4"));
+        // (absent) marker for the missing side
+        assert!(plain.contains("(absent)"));
+    }
+
+    #[test]
+    fn differ_canonical_view_includes_rhs_when_rhs_differs() {
+        let plain = strip_ansi(&render(&diff("1 x1 >= 1 ;\n", "1 x1 >= 2 ;\n")));
+        assert!(plain.contains("rhs"));
+        assert!(plain.contains("A=+1"));
+        assert!(plain.contains("B=+2"));
     }
 
     #[test]
