@@ -7,6 +7,10 @@ library. Reporters render it for output. We plan four reporters; v1
 ships only the first, but the abstraction is designed so the later
 ones drop in without touching the comparison engine.
 
+## Status
+
+Stage 1 (plain text) is shipped. Stages 2–4 are not yet implemented.
+
 ## Stage 1: plain text (v1)
 
 Goal: maximally portable, pipeable, no extra dependencies, easy to

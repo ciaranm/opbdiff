@@ -2,16 +2,9 @@
 
 A semantic diff for [VeriPB][veripb]-extended OPB pseudo-Boolean files.
 
-## Status
-
-Pre-release. Skeleton only; no working comparison yet. APIs and CLI flags are
-unstable and will change.
-
-## What it is
-
-`opbdiff` compares two OPB files by what they *mean* rather than by their bytes.
-For example, these two lines describe the same constraint and `opbdiff` will
-treat them as equivalent:
+`opbdiff` compares two OPB files by what they *mean* rather than by their
+bytes. For example, these two lines describe the same constraint and
+`opbdiff` treats them as equivalent:
 
 ```
 1 x1 1 x2 1 x3 >= 2 ;
@@ -20,14 +13,41 @@ treat them as equivalent:
 
 Two intended uses:
 
-- Comparing before-and-after OPB output when a change to a proof-generating
-  solver causes unexpected breakage.
-- Lining up output from a solver using its own encoder against output from an
-  external encoder of the same problem.
+- Comparing before-and-after OPB output when a change to a
+  proof-generating solver causes unexpected breakage.
+- Lining up output from a solver using its own encoder against output
+  from an external encoder of the same problem.
 
-Comparison is order-sensitive by default; an `--unordered` flag treats the
-constraints as multisets. Constraint labels (`@name ...`) can optionally be
-checked against a directional reference file.
+## Status
+
+`v0.1` — the originally-scoped v1 feature set is implemented. APIs and
+CLI flags are pre-1.0 and may change.
+
+What works:
+
+- Full parser for the OPB dialect VeriPB emits (see
+  [`dev_docs/0002-opb-format.md`](dev_docs/0002-opb-format.md)).
+- Canonical-form normalisation: `<=` flipped to `>=`, negated literals
+  rewritten via `~x = 1 - x`, like terms combined, LHS constants moved
+  to the RHS, zero-coefficient terms dropped, lexicographic sort. See
+  [`dev_docs/0003-normalization.md`](dev_docs/0003-normalization.md).
+- Ordered (by position) and `--unordered` (multiset) comparison.
+- Directional `--check-labels` with `--reference A|B`.
+- Plain-text reporter with a per-position breakdown and a summary line.
+- 0 / 1 / 2 exit codes for use in scripts and tests.
+
+Documented v1 limitations:
+
+- Equality constraints (`=`) are rejected with a clear error.
+  Practical concern is low; rationale in
+  [`dev_docs/0003-normalization.md`](dev_docs/0003-normalization.md).
+- Auxiliary-variable name differences across the two files are
+  surfaced rather than silently equated. This is deliberate, since
+  spotting them is part of the use-case; a future opt-in flag may add
+  scoped aliasing.
+- Only the plain-text reporter ships; colour, JSON, and side-by-side
+  are sketched in
+  [`dev_docs/0005-output-formats.md`](dev_docs/0005-output-formats.md).
 
 ## Build
 
@@ -37,25 +57,77 @@ Requires a stable Rust toolchain (edition 2024, MSRV 1.85).
 cargo build --release
 ```
 
-## Usage
+The binary lands at `target/release/opbdiff`.
 
-The CLI is not implemented yet. The intended shape is:
+## Usage
 
 ```
 opbdiff [OPTIONS] <A> <B>
 ```
 
-See `dev_docs/` for the design in progress.
+Options:
+
+| Flag                       | Effect                                        |
+|----------------------------|-----------------------------------------------|
+| `-u`, `--unordered`        | Compare constraints as multisets (ignore order). |
+| `-L`, `--check-labels`     | Enforce reference-side labels on the candidate. |
+| `-r`, `--reference <A\|B>` | Which side is the label reference (default `B`). |
+
+Exit codes:
+
+| Code | Meaning                                  |
+|-----:|------------------------------------------|
+| `0`  | Files are semantically equivalent.       |
+| `1`  | Files differ.                            |
+| `2`  | Parse, I/O, or other usage error.        |
+
+### Examples
+
+Default ordered comparison:
+
+```
+$ opbdiff a.opb b.opb
+Differing at constraint #11 (A line 14, B line 12):
+  A: @c[_1][le] -2 i[a][b0] ... >= -1;
+  B: @c[_1][ge]  1 i[e][b0] ... >=  1 ;
+...
+Summary (ordered): 10 matches, 4 differing, 0 only in A, 0 only in B.
+```
+
+Ignoring constraint order:
+
+```
+$ opbdiff --unordered a.opb b.opb
+Files are semantically equivalent (14 constraints compared, unordered).
+```
+
+Enforcing labels with `b.opb` as the reference:
+
+```
+$ opbdiff --unordered --check-labels a.opb b.opb
+Label mismatch at constraint A#1 / B#1 (reference=B):
+  expected label: i[a][lb]
+  actual label:   (none)
+  ...
+Summary (unordered): 4 matches, 0 differing, 0 only in A, 0 only in B, 10 label mismatches.
+```
 
 ## Development notes
 
-Active design and implementation notes live in [`dev_docs/`](dev_docs/),
-including the OPB dialect we accept, the normalisation rules, and the
-comparison algorithm.
+Active design and implementation notes live in
+[`dev_docs/`](dev_docs/), including the OPB dialect we accept, the
+normalisation rules, the comparison algorithm, and the staged output
+format roadmap.
 
-This project is being developed with significant assistance from an AI
-coding assistant (Claude, by Anthropic) under human oversight. Each commit
-carries a `Co-Authored-By` trailer identifying the AI contributor.
+This project is developed with significant assistance from an AI
+coding assistant (Claude, by Anthropic) under human oversight. Every
+commit carries a `Co-Authored-By` trailer identifying the AI
+contributor; every dev_doc opens with the same disclosure. Factual
+claims about VeriPB or third-party tooling are worth re-verifying
+against upstream.
+
+CI runs `cargo fmt --check`, `cargo clippy -D warnings`, the full
+test suite, and `cargo doc -D rustdoc::*` on every push and PR.
 
 ## Licence
 
@@ -67,8 +139,8 @@ Dual-licensed under either of:
 at your option.
 
 Unless you explicitly state otherwise, any contribution intentionally
-submitted for inclusion in the work by you, as defined in the Apache-2.0
-licence, shall be dual licensed as above, without any additional terms or
-conditions.
+submitted for inclusion in the work by you, as defined in the
+Apache-2.0 licence, shall be dual licensed as above, without any
+additional terms or conditions.
 
 [veripb]: https://gitlab.com/MIAOresearch/software/VeriPB

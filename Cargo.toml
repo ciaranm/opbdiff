@@ -6,6 +6,7 @@ rust-version = "1.85"
 license = "MIT OR Apache-2.0"
 description = "Semantic diff for VeriPB-extended OPB pseudo-Boolean files"
 readme = "README.md"
+repository = "https://github.com/ciaranm/opbdiff"
 keywords = ["opb", "veripb", "pseudo-boolean", "diff", "sat"]
 categories = ["command-line-utilities", "development-tools"]
 publish = false
