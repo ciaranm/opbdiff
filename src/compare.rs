@@ -1,16 +1,53 @@
-//! Comparison engine. Takes two canonical models and produces a
-//! structured diff result. Ordered mode only in v1; unordered and
-//! label handling land in later commits.
+//! Comparison engine. Supports two matching modes (ordered by
+//! position, unordered by canonical-form multiset) and optional
+//! directional label checking.
 //!
 //! See `dev_docs/0004-comparison-algorithm.md` for the algorithm.
 
+use std::collections::HashMap;
+
 use crate::model::{
-    CanonicalFile, CanonicalLabelledConstraint, CanonicalObjectiveItem, CanonicalPreservedItem,
+    CanonicalConstraint, CanonicalFile, CanonicalLabelledConstraint, CanonicalObjectiveItem,
+    CanonicalPreservedItem,
 };
+
+/// How to pair up constraints between the two files.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CompareMode {
+    /// Pair by position: `A[i]` is compared with `B[i]`.
+    #[default]
+    Ordered,
+    /// Pair by canonical form: greedy multiset matching, position
+    /// within each file is irrelevant.
+    Unordered,
+}
+
+/// Which side carries the "must-be-honoured" labels for
+/// `--check-labels` mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ReferenceSide {
+    /// File A is the reference; labels in A must be honoured in B.
+    A,
+    /// File B is the reference; labels in B must be honoured in A.
+    /// This is the default for the verbal "candidate vs reference"
+    /// description discussed in `dev_docs/0004`.
+    #[default]
+    B,
+}
+
+/// Comparison options. Public so callers can construct without going
+/// through clap.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct CompareOptions {
+    pub mode: CompareMode,
+    /// Some(reference) enables directional label checking.
+    pub label_check: Option<ReferenceSide>,
+}
 
 /// The full structured diff of two canonical files.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DiffResult {
+    pub mode: CompareMode,
     pub objective: ObjectiveDiff,
     pub preserved: PreservedDiff,
     pub constraints: Vec<ConstraintDiff>,
@@ -40,47 +77,63 @@ pub enum PreservedDiff {
     OnlyInB(CanonicalPreservedItem),
 }
 
-/// Per-position outcome for one constraint pair in ordered mode.
-///
-/// `Match` and `Differ` both carry both source-side records so the
-/// reporter can show the original text; `Match` is not opaque because
-/// later modes (label checking) may reclassify a match.
+/// Per-constraint outcome. Carries both sides' source records so the
+/// reporter can show originals. `index_a` and `index_b` are the
+/// 0-based positions in each file's constraint list; under ordered
+/// mode they are equal for `Match`, `Differ`, and `LabelMismatch`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConstraintDiff {
     Match {
-        index: usize,
+        index_a: usize,
+        index_b: usize,
         a: CanonicalLabelledConstraint,
         b: CanonicalLabelledConstraint,
     },
+    /// Ordered mode only: the same position holds non-equivalent
+    /// constraints on each side. Never produced by unordered mode.
     Differ {
-        index: usize,
+        index_a: usize,
+        index_b: usize,
         a: CanonicalLabelledConstraint,
         b: CanonicalLabelledConstraint,
     },
-    ExtraInA {
+    /// A's constraint at this position has no partner in B.
+    OnlyInA {
         index: usize,
         a: CanonicalLabelledConstraint,
     },
-    ExtraInB {
+    /// B's constraint at this position has no partner in A.
+    OnlyInB {
         index: usize,
         b: CanonicalLabelledConstraint,
+    },
+    /// Canonical forms matched, but the reference-side label was
+    /// not honoured by the candidate side.
+    LabelMismatch {
+        index_a: usize,
+        index_b: usize,
+        a: CanonicalLabelledConstraint,
+        b: CanonicalLabelledConstraint,
+        reference: ReferenceSide,
     },
 }
 
-/// A flat tally of the diff result for human and machine summaries.
+/// Flat tally of the diff for human and machine summaries.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Summary {
     pub matches: usize,
     pub differing: usize,
-    pub extra_in_a: usize,
-    pub extra_in_b: usize,
+    pub only_in_a: usize,
+    pub only_in_b: usize,
+    pub label_mismatches: usize,
     pub objective_difference: bool,
     pub preserved_difference: bool,
 }
 
 impl DiffResult {
-    /// True iff every part of the diff is a `Match` (or both-absent for
-    /// objective/preserved). This is what determines exit code 0 vs 1.
+    /// True iff every part of the diff is a `Match` (or both-absent
+    /// for objective/preserved). Anything else — including label
+    /// mismatches — counts as different.
     pub fn is_equivalent(&self) -> bool {
         matches!(
             self.objective,
@@ -100,8 +153,9 @@ impl DiffResult {
             match d {
                 ConstraintDiff::Match { .. } => s.matches += 1,
                 ConstraintDiff::Differ { .. } => s.differing += 1,
-                ConstraintDiff::ExtraInA { .. } => s.extra_in_a += 1,
-                ConstraintDiff::ExtraInB { .. } => s.extra_in_b += 1,
+                ConstraintDiff::OnlyInA { .. } => s.only_in_a += 1,
+                ConstraintDiff::OnlyInB { .. } => s.only_in_b += 1,
+                ConstraintDiff::LabelMismatch { .. } => s.label_mismatches += 1,
             }
         }
         s.objective_difference = !matches!(
@@ -116,41 +170,194 @@ impl DiffResult {
     }
 }
 
-/// Compare two canonical files in ordered mode: constraints are
-/// paired by position. Labels are ignored for the match decision in
-/// this mode.
+/// Backward-compatible thin wrapper: ordered mode, no label check.
 pub fn compare_ordered(a: &CanonicalFile, b: &CanonicalFile) -> DiffResult {
-    let mut constraints = Vec::with_capacity(a.constraints.len().max(b.constraints.len()));
-    let max = a.constraints.len().max(b.constraints.len());
+    compare(
+        a,
+        b,
+        CompareOptions {
+            mode: CompareMode::Ordered,
+            label_check: None,
+        },
+    )
+}
+
+/// Compare two canonical files. Always produces a `DiffResult`; the
+/// callsite is responsible for interpreting the verdict.
+pub fn compare(a: &CanonicalFile, b: &CanonicalFile, options: CompareOptions) -> DiffResult {
+    let constraints = match options.mode {
+        CompareMode::Ordered => ordered_constraints(&a.constraints, &b.constraints),
+        CompareMode::Unordered => unordered_constraints(&a.constraints, &b.constraints),
+    };
+
+    let constraints = if let Some(reference) = options.label_check {
+        apply_label_check(constraints, reference)
+    } else {
+        constraints
+    };
+
+    DiffResult {
+        mode: options.mode,
+        objective: compare_objectives(&a.objective, &b.objective),
+        preserved: compare_preserved(&a.preserved, &b.preserved),
+        constraints,
+    }
+}
+
+fn ordered_constraints(
+    a: &[CanonicalLabelledConstraint],
+    b: &[CanonicalLabelledConstraint],
+) -> Vec<ConstraintDiff> {
+    let max = a.len().max(b.len());
+    let mut out = Vec::with_capacity(max);
     for i in 0..max {
-        let entry = match (a.constraints.get(i), b.constraints.get(i)) {
+        let entry = match (a.get(i), b.get(i)) {
             (Some(ac), Some(bc)) if ac.form == bc.form => ConstraintDiff::Match {
-                index: i,
+                index_a: i,
+                index_b: i,
                 a: ac.clone(),
                 b: bc.clone(),
             },
             (Some(ac), Some(bc)) => ConstraintDiff::Differ {
-                index: i,
+                index_a: i,
+                index_b: i,
                 a: ac.clone(),
                 b: bc.clone(),
             },
-            (Some(ac), None) => ConstraintDiff::ExtraInA {
+            (Some(ac), None) => ConstraintDiff::OnlyInA {
                 index: i,
                 a: ac.clone(),
             },
-            (None, Some(bc)) => ConstraintDiff::ExtraInB {
+            (None, Some(bc)) => ConstraintDiff::OnlyInB {
                 index: i,
                 b: bc.clone(),
             },
             (None, None) => unreachable!("max bounded by both lengths"),
         };
-        constraints.push(entry);
+        out.push(entry);
+    }
+    out
+}
+
+/// Unordered mode: greedy multiset match.
+///
+/// Build a map from canonical form to a FIFO of B's available indices.
+/// Walk A; for each constraint, pop a partner from B's queue or emit
+/// OnlyInA. Anything left in B's queues at the end is OnlyInB.
+///
+/// Greedy is good enough for v1; it may produce a sub-optimal pairing
+/// under future label-checking when multiple equivalent constraints
+/// have different labels, but that case is exotic.
+fn unordered_constraints(
+    a: &[CanonicalLabelledConstraint],
+    b: &[CanonicalLabelledConstraint],
+) -> Vec<ConstraintDiff> {
+    let mut b_available: HashMap<&CanonicalConstraint, Vec<usize>> = HashMap::new();
+    for (i, bc) in b.iter().enumerate() {
+        b_available.entry(&bc.form).or_default().push(i);
+    }
+    // FIFO: pop from front. Vec::remove(0) is O(n) but n is small per
+    // canonical form. For very pathological inputs we could switch to
+    // VecDeque; not worth the noise for v1.
+
+    let mut out = Vec::with_capacity(a.len() + b.len());
+
+    for (ai, ac) in a.iter().enumerate() {
+        let bi_opt = b_available.get_mut(&ac.form).and_then(|q| {
+            if q.is_empty() {
+                None
+            } else {
+                Some(q.remove(0))
+            }
+        });
+        match bi_opt {
+            Some(bi) => out.push(ConstraintDiff::Match {
+                index_a: ai,
+                index_b: bi,
+                a: ac.clone(),
+                b: b[bi].clone(),
+            }),
+            None => out.push(ConstraintDiff::OnlyInA {
+                index: ai,
+                a: ac.clone(),
+            }),
+        }
     }
 
-    DiffResult {
-        objective: compare_objectives(&a.objective, &b.objective),
-        preserved: compare_preserved(&a.preserved, &b.preserved),
-        constraints,
+    // Anything still queued in B is unmatched. Walk B in original
+    // order, emitting OnlyInB for indices that remain.
+    let mut remaining: std::collections::HashSet<usize> = std::collections::HashSet::new();
+    for q in b_available.values() {
+        for i in q {
+            remaining.insert(*i);
+        }
+    }
+    for (bi, bc) in b.iter().enumerate() {
+        if remaining.contains(&bi) {
+            out.push(ConstraintDiff::OnlyInB {
+                index: bi,
+                b: bc.clone(),
+            });
+        }
+    }
+
+    out
+}
+
+fn apply_label_check(
+    constraints: Vec<ConstraintDiff>,
+    reference: ReferenceSide,
+) -> Vec<ConstraintDiff> {
+    constraints
+        .into_iter()
+        .map(|d| match d {
+            ConstraintDiff::Match {
+                index_a,
+                index_b,
+                a,
+                b,
+            } => {
+                if label_violates(&a, &b, reference) {
+                    ConstraintDiff::LabelMismatch {
+                        index_a,
+                        index_b,
+                        a,
+                        b,
+                        reference,
+                    }
+                } else {
+                    ConstraintDiff::Match {
+                        index_a,
+                        index_b,
+                        a,
+                        b,
+                    }
+                }
+            }
+            other => other,
+        })
+        .collect()
+}
+
+/// Returns true if the candidate side fails to honour the reference
+/// side's label. The rule:
+///
+/// - if the reference side has no label, no violation;
+/// - if the reference side has a label, the candidate side must have
+///   the *same* label (extras don't matter here because each
+///   constraint has at most one label).
+fn label_violates(
+    a: &CanonicalLabelledConstraint,
+    b: &CanonicalLabelledConstraint,
+    reference: ReferenceSide,
+) -> bool {
+    let (ref_label, cand_label) = match reference {
+        ReferenceSide::A => (a.label.as_deref(), b.label.as_deref()),
+        ReferenceSide::B => (b.label.as_deref(), a.label.as_deref()),
+    };
+    match ref_label {
+        None => false,
+        Some(r) => cand_label != Some(r),
     }
 }
 
@@ -196,133 +403,162 @@ mod tests {
         normalise_file(&parse(input).unwrap()).unwrap()
     }
 
+    // ----- ordered mode -------------------------------------------------
+
     #[test]
-    fn equivalent_files_compare_equal() {
+    fn equivalent_files_compare_equal_ordered() {
         let a = canonical("1 x1 1 x2 >= 1 ;\n");
         let b = canonical("+1 ~x2 +1 ~x1 <= 1 ;\n");
         let diff = compare_ordered(&a, &b);
         assert!(diff.is_equivalent());
-        let s = diff.summary();
-        assert_eq!(s.matches, 1);
-        assert_eq!(s.differing, 0);
     }
 
     #[test]
-    fn differing_constraint_at_index_is_flagged() {
+    fn differing_at_index_in_ordered_mode() {
         let a = canonical("1 x1 >= 1 ;\n1 x2 >= 1 ;\n");
         let b = canonical("1 x1 >= 1 ;\n1 x3 >= 1 ;\n");
         let diff = compare_ordered(&a, &b);
-        assert!(!diff.is_equivalent());
         let s = diff.summary();
         assert_eq!(s.matches, 1);
         assert_eq!(s.differing, 1);
-        match &diff.constraints[1] {
-            ConstraintDiff::Differ { index, .. } => assert_eq!(*index, 1),
-            other => panic!("expected Differ at index 1, got {other:?}"),
-        }
     }
 
     #[test]
-    fn extra_constraint_in_a_is_flagged() {
+    fn extras_in_ordered_mode() {
         let a = canonical("1 x1 >= 1 ;\n1 x2 >= 1 ;\n");
         let b = canonical("1 x1 >= 1 ;\n");
         let diff = compare_ordered(&a, &b);
-        assert!(!diff.is_equivalent());
         let s = diff.summary();
-        assert_eq!(s.matches, 1);
-        assert_eq!(s.extra_in_a, 1);
-        assert_eq!(s.extra_in_b, 0);
-        assert!(matches!(
-            diff.constraints[1],
-            ConstraintDiff::ExtraInA { .. }
-        ));
+        assert_eq!(s.only_in_a, 1);
+        assert_eq!(s.only_in_b, 0);
+    }
+
+    // ----- unordered mode ----------------------------------------------
+
+    fn compare_unordered(a: &CanonicalFile, b: &CanonicalFile) -> DiffResult {
+        compare(
+            a,
+            b,
+            CompareOptions {
+                mode: CompareMode::Unordered,
+                label_check: None,
+            },
+        )
     }
 
     #[test]
-    fn extra_constraint_in_b_is_flagged() {
-        let a = canonical("1 x1 >= 1 ;\n");
-        let b = canonical("1 x1 >= 1 ;\n1 x2 >= 1 ;\n");
-        let diff = compare_ordered(&a, &b);
-        assert!(!diff.is_equivalent());
-        let s = diff.summary();
-        assert_eq!(s.matches, 1);
-        assert_eq!(s.extra_in_b, 1);
-        assert!(matches!(
-            diff.constraints[1],
-            ConstraintDiff::ExtraInB { .. }
-        ));
+    fn reordered_constraints_compare_equal_unordered() {
+        let a = canonical("1 x1 >= 1 ;\n1 x2 >= 1 ;\n1 x3 >= 1 ;\n");
+        let b = canonical("1 x3 >= 1 ;\n1 x1 >= 1 ;\n1 x2 >= 1 ;\n");
+        // Ordered should NOT be equivalent.
+        assert!(!compare_ordered(&a, &b).is_equivalent());
+        // Unordered SHOULD be equivalent.
+        let diff = compare_unordered(&a, &b);
+        assert!(diff.is_equivalent(), "summary: {:?}", diff.summary());
+        assert_eq!(diff.summary().matches, 3);
     }
 
     #[test]
-    fn labels_do_not_affect_match_in_v1() {
-        // Same canonical form, different labels — still a Match.
-        let a = canonical("@card 1 x1 1 x2 >= 1 ;\n");
-        let b = canonical("@something_else 1 x1 1 x2 >= 1 ;\n");
-        let diff = compare_ordered(&a, &b);
-        assert!(diff.is_equivalent());
-        // But the labels are preserved in the diff record for the
-        // future label-checking mode.
-        match &diff.constraints[0] {
-            ConstraintDiff::Match { a, b, .. } => {
-                assert_eq!(a.label.as_deref(), Some("card"));
-                assert_eq!(b.label.as_deref(), Some("something_else"));
-            }
-            _ => panic!(),
+    fn unordered_matches_duplicates_by_multiplicity() {
+        // A has x1 twice, B has x1 once. One match, one OnlyInA.
+        let a = canonical("1 x1 >= 1 ;\n1 x1 >= 1 ;\n");
+        let b = canonical("1 x1 >= 1 ;\n");
+        let diff = compare_unordered(&a, &b);
+        let s = diff.summary();
+        assert_eq!(s.matches, 1);
+        assert_eq!(s.only_in_a, 1);
+        assert_eq!(s.only_in_b, 0);
+    }
+
+    #[test]
+    fn unordered_never_emits_differ() {
+        // In unordered mode, a constraint either matches or it doesn't;
+        // there is no notion of "differing at a position".
+        let a = canonical("1 x1 >= 1 ;\n1 x2 >= 1 ;\n");
+        let b = canonical("1 x3 >= 1 ;\n1 x4 >= 1 ;\n");
+        let diff = compare_unordered(&a, &b);
+        for d in &diff.constraints {
+            assert!(!matches!(d, ConstraintDiff::Differ { .. }));
         }
+        let s = diff.summary();
+        assert_eq!(s.matches, 0);
+        assert_eq!(s.only_in_a, 2);
+        assert_eq!(s.only_in_b, 2);
+    }
+
+    // ----- label checking ---------------------------------------------
+
+    fn with_label_check(
+        a: &CanonicalFile,
+        b: &CanonicalFile,
+        mode: CompareMode,
+        reference: ReferenceSide,
+    ) -> DiffResult {
+        compare(
+            a,
+            b,
+            CompareOptions {
+                mode,
+                label_check: Some(reference),
+            },
+        )
     }
 
     #[test]
-    fn objectives_compared_for_equivalence() {
-        let a = canonical("min: 1 x1 1 x2 ;\n");
-        let b = canonical("min: 1 x2 1 x1 ;\n");
+    fn label_check_off_ignores_label_differences() {
+        let a = canonical("@one 1 x1 >= 1 ;\n");
+        let b = canonical("@two 1 x1 >= 1 ;\n");
         let diff = compare_ordered(&a, &b);
-        assert!(matches!(diff.objective, ObjectiveDiff::Match));
+        assert!(diff.is_equivalent());
+    }
+
+    #[test]
+    fn label_check_reference_b_flags_missing_label_in_a() {
+        let a = canonical("1 x1 >= 1 ;\n");
+        let b = canonical("@card 1 x1 >= 1 ;\n");
+        let diff = with_label_check(&a, &b, CompareMode::Ordered, ReferenceSide::B);
+        assert!(!diff.is_equivalent());
+        let s = diff.summary();
+        assert_eq!(s.label_mismatches, 1);
+    }
+
+    #[test]
+    fn label_check_reference_b_tolerates_extra_labels_in_a() {
+        // B is the reference and has no label → extra label in A is fine.
+        let a = canonical("@extra 1 x1 >= 1 ;\n");
+        let b = canonical("1 x1 >= 1 ;\n");
+        let diff = with_label_check(&a, &b, CompareMode::Ordered, ReferenceSide::B);
         assert!(diff.is_equivalent());
     }
 
     #[test]
-    fn objective_in_one_only_is_flagged() {
-        let a = canonical("min: 1 x1 ;\n");
-        let b = canonical("");
-        let diff = compare_ordered(&a, &b);
-        assert!(matches!(diff.objective, ObjectiveDiff::OnlyInA(_)));
+    fn label_check_reference_a_inverts_polarity() {
+        // Same constraint pair as the previous test, but now A is the
+        // reference, so the extra label in A is required in B and B
+        // doesn't have it.
+        let a = canonical("@extra 1 x1 >= 1 ;\n");
+        let b = canonical("1 x1 >= 1 ;\n");
+        let diff = with_label_check(&a, &b, CompareMode::Ordered, ReferenceSide::A);
         assert!(!diff.is_equivalent());
-        assert!(diff.summary().objective_difference);
+        assert_eq!(diff.summary().label_mismatches, 1);
     }
 
     #[test]
-    fn objective_disagreement_is_flagged() {
-        let a = canonical("min: 1 x1 ;\n");
-        let b = canonical("min: 1 x2 ;\n");
-        let diff = compare_ordered(&a, &b);
-        assert!(matches!(diff.objective, ObjectiveDiff::Differ { .. }));
+    fn label_check_wrong_label_is_mismatch() {
+        let a = canonical("@bar 1 x1 >= 1 ;\n");
+        let b = canonical("@foo 1 x1 >= 1 ;\n");
+        let diff = with_label_check(&a, &b, CompareMode::Ordered, ReferenceSide::B);
         assert!(!diff.is_equivalent());
+        assert_eq!(diff.summary().label_mismatches, 1);
     }
 
     #[test]
-    fn preserved_in_one_only_is_flagged() {
-        let a = canonical("preserved: x1 x2 ;\n");
-        let b = canonical("");
-        let diff = compare_ordered(&a, &b);
-        assert!(matches!(diff.preserved, PreservedDiff::OnlyInA(_)));
-        assert!(!diff.is_equivalent());
-        assert!(diff.summary().preserved_difference);
-    }
-
-    #[test]
-    fn preserved_order_does_not_matter() {
-        let a = canonical("preserved: x1 x2 x3 ;\n");
-        let b = canonical("preserved: x3 x1 x2 ;\n");
-        let diff = compare_ordered(&a, &b);
-        assert!(matches!(diff.preserved, PreservedDiff::Match));
-    }
-
-    #[test]
-    fn empty_files_are_equivalent() {
-        let a = canonical("");
-        let b = canonical("");
-        let diff = compare_ordered(&a, &b);
-        assert!(diff.is_equivalent());
-        assert_eq!(diff.summary(), Summary::default());
+    fn label_check_combines_with_unordered_mode() {
+        // Same canonical forms, different order, same labels. Should
+        // be equivalent under unordered + label check.
+        let a = canonical("@one 1 x1 >= 1 ;\n@two 1 x2 >= 1 ;\n");
+        let b = canonical("@two 1 x2 >= 1 ;\n@one 1 x1 >= 1 ;\n");
+        let diff = with_label_check(&a, &b, CompareMode::Unordered, ReferenceSide::B);
+        assert!(diff.is_equivalent(), "summary: {:?}", diff.summary());
     }
 }

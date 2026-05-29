@@ -1,7 +1,8 @@
 //! `opbdiff` binary entry point.
 //!
-//! Exits 0 if the two files are semantically equivalent, 1 if they
-//! differ, and 2 on any error (I/O, parse, normalisation).
+//! Exits 0 if the two files are semantically equivalent under the
+//! chosen options, 1 if they differ, and 2 on any error (I/O, parse,
+//! normalisation).
 
 mod cli;
 
@@ -12,7 +13,7 @@ use std::process::ExitCode;
 use anyhow::{Context, Result};
 use clap::Parser as _;
 
-use opbdiff::compare::compare_ordered;
+use opbdiff::compare::compare;
 use opbdiff::model::{CanonicalFile, normalise_file};
 use opbdiff::parser::parse;
 use opbdiff::report::plain;
@@ -23,8 +24,6 @@ fn main() -> ExitCode {
         Ok(true) => ExitCode::from(0),
         Ok(false) => ExitCode::from(1),
         Err(err) => {
-            // Print the full error chain to stderr so the user sees both
-            // the failure and its context (file name, parse line, etc.).
             let mut stderr = std::io::stderr();
             let _ = writeln!(stderr, "opbdiff: {err:#}");
             ExitCode::from(2)
@@ -35,7 +34,7 @@ fn main() -> ExitCode {
 fn run(args: &cli::Args) -> Result<bool> {
     let a = load(&args.a)?;
     let b = load(&args.b)?;
-    let diff = compare_ordered(&a, &b);
+    let diff = compare(&a, &b, args.compare_options());
 
     let stdout = std::io::stdout();
     let mut handle = stdout.lock();

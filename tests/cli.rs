@@ -44,7 +44,7 @@ fn differing_synthetic_pair_exits_one_and_shows_diff() {
         .assert()
         .code(1)
         .stdout(contains("Differing at constraint #1"))
-        .stdout(contains("Summary:"));
+        .stdout(contains("Summary (ordered)"));
 }
 
 #[test]
@@ -68,5 +68,32 @@ fn odd_even_sum_fixture_pair_exits_one_under_ordered_mode() {
     run(&data("odd_even_sum.opb"), &data("odd_even_sum.verifiedopb"))
         .assert()
         .code(1)
-        .stdout(contains("Summary:"));
+        .stdout(contains("Summary (ordered)"));
+}
+
+#[test]
+fn odd_even_sum_pair_exits_zero_under_unordered_mode() {
+    // Same pair, unordered mode: the reordering no longer matters.
+    let mut cmd = Command::cargo_bin("opbdiff").expect("binary built");
+    cmd.arg("--unordered")
+        .arg(data("odd_even_sum.opb"))
+        .arg(data("odd_even_sum.verifiedopb"))
+        .assert()
+        .success()
+        .stdout(contains("semantically equivalent"));
+}
+
+#[test]
+fn check_labels_with_explicit_reference_flag() {
+    let a = write_tmp("labels_a.opb", "1 x1 >= 1 ;\n");
+    let b = write_tmp("labels_b.opb", "@card 1 x1 >= 1 ;\n");
+    let mut cmd = Command::cargo_bin("opbdiff").expect("binary built");
+    cmd.arg("--check-labels")
+        .arg("--reference=b")
+        .arg(&a)
+        .arg(&b)
+        .assert()
+        .code(1)
+        .stdout(contains("Label mismatch"))
+        .stdout(contains("expected label: card"));
 }
