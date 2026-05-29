@@ -76,6 +76,25 @@ either matched, differing-at-index, or extra-on-one-side. We do not
 fuzzy-match "similar" constraints across A and B for v1. Fuzzy
 alignment is a known follow-up.
 
+## Known limitation: auxiliary-variable renaming
+
+Three of the four `.opb` / `.verifiedopb` fixture pairs we have
+(`money`, `crystal_maze`, `sudoku`) use *different* names for the
+auxiliary variables introduced by AllDifferent and similar
+decompositions. For example, one side uses `f[0][notequals]` where
+the other uses `x[money_a_d][0_1]`. The bound constraints on the
+shared user variables normalise to the same canonical form on both
+sides, but the AllDifferent constraints do not, because they
+mention aux variables that have no shared identity.
+
+We deliberately do **not** treat differently-named variables as
+equivalent in v1. Adding aux-var renaming (whether by an explicit
+mapping file, by structural inference, or by graph-isomorphism over
+the constraint set) is a future feature that needs its own design.
+Until then, the comparison engine will correctly report these as
+differing, and the human can see from the diff that the difference
+is confined to aux-var names.
+
 ## Verdict and exit code
 
 The verdict is **equivalent** if and only if every recorded entry

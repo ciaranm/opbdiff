@@ -1,0 +1,68 @@
+//! Canonical model: post-normalisation forms that define semantic
+//! equality. See `dev_docs/0003-normalization.md` for the procedure.
+
+mod normal;
+
+pub use normal::{NormaliseError, NormaliseErrorKind, normalise_file};
+
+/// A canonical constraint of the form `Σ coefficient · variable >= rhs`.
+///
+/// Terms are sorted lexicographically by variable name and every
+/// coefficient is non-zero. The same canonical form is therefore a
+/// stable hashable key.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CanonicalConstraint {
+    pub terms: Vec<(String, i64)>,
+    pub rhs: i64,
+}
+
+/// A canonical `min:` objective: a sorted term list with no RHS.
+///
+/// Constant terms in the source objective are dropped during
+/// normalisation because shifting an objective by a constant does
+/// not change what minimises it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CanonicalObjective {
+    pub terms: Vec<(String, i64)>,
+}
+
+/// A canonical `preserved:` list. Order does not matter for projected
+/// enumeration, so the literals are sorted and de-duplicated.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CanonicalPreserved {
+    /// `(variable, negated)` pairs, sorted, deduplicated.
+    pub literals: Vec<(String, bool)>,
+}
+
+/// A canonical constraint together with the source-level metadata the
+/// reporter needs (label, line number, original text).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CanonicalLabelledConstraint {
+    pub label: Option<String>,
+    pub form: CanonicalConstraint,
+    pub line: usize,
+    pub raw: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CanonicalObjectiveItem {
+    pub form: CanonicalObjective,
+    pub line: usize,
+    pub raw: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CanonicalPreservedItem {
+    pub form: CanonicalPreserved,
+    pub line: usize,
+    pub raw: String,
+}
+
+/// A complete file in canonical form. The comparison engine consumes
+/// this directly.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct CanonicalFile {
+    pub objective: Option<CanonicalObjectiveItem>,
+    pub preserved: Option<CanonicalPreservedItem>,
+    pub constraints: Vec<CanonicalLabelledConstraint>,
+}
