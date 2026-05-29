@@ -1,0 +1,18 @@
+[package]
+name = "opbdiff"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+description = "Semantic diff for VeriPB-extended OPB pseudo-Boolean files"
+readme = "README.md"
+keywords = ["opb", "veripb", "pseudo-boolean", "diff", "sat"]
+categories = ["command-line-utilities", "development-tools"]
+publish = false
+
+[dependencies]
+
+[dev-dependencies]
+
+[profile.release]
+lto = "thin"
