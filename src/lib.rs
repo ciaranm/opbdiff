@@ -4,5 +4,6 @@
 //!
 //! See the `dev_docs/` directory in the repository for design notes.
 
+pub mod compare;
 pub mod model;
 pub mod parser;
