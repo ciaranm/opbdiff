@@ -16,3 +16,9 @@ publish = false
 
 [profile.release]
 lto = "thin"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
