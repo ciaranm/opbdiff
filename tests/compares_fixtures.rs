@@ -71,6 +71,7 @@ fn odd_even_sum_pair_is_equivalent_under_unordered() {
         &b,
         CompareOptions {
             mode: CompareMode::Unordered,
+            match_labels: false,
             label_check: None,
         },
     );
@@ -79,6 +80,54 @@ fn odd_even_sum_pair_is_equivalent_under_unordered() {
         "expected odd_even_sum unordered to be equivalent, summary: {:?}",
         diff.summary(),
     );
+}
+
+#[test]
+fn colour_pair_matches_edges_by_label_under_match_labels() {
+    // The colour fixtures are two encoders of the same graph-colouring
+    // problem. They share the `@c[edge_i_j][gt|lt]` reified-equality
+    // labels but differ in the auxiliary-variable name on each (`f[k]`
+    // vs `b[edge_i_j]`). Under --match-labels those edge constraints
+    // pair up by label and report a content difference confined to the
+    // aux variable; the shared variable bounds, which neither encoder
+    // labels identically, fall back to canonical matching.
+    let a = load("colour.opb");
+    let b = load("colour.verifiedopb");
+    let diff = compare(
+        &a,
+        &b,
+        CompareOptions {
+            mode: CompareMode::Unordered,
+            match_labels: true,
+            label_check: None,
+        },
+    );
+    assert!(diff.matched_by_label);
+
+    // Every edge constraint should appear as a Differ whose two sides
+    // carry the *same* label — proof that label-matching paired them
+    // rather than canonical form (which differs on the aux var).
+    let edge_differs: Vec<_> = diff
+        .constraints
+        .iter()
+        .filter(|d| {
+            matches!(
+                d,
+                ConstraintDiff::Differ { a, b, .. }
+                    if a.label.as_deref() == b.label.as_deref()
+                        && a.label.as_deref().is_some_and(|l| l.starts_with("c[edge_"))
+            )
+        })
+        .collect();
+    assert!(
+        edge_differs.len() >= 20,
+        "expected the reified-equality edge constraints to pair by label, got {}",
+        edge_differs.len(),
+    );
+
+    // The shared variable bounds carry no matching label, so they fall
+    // through to unordered canonical matching and match cleanly.
+    assert!(diff.summary().matches > 0);
 }
 
 #[test]
@@ -113,6 +162,7 @@ fn unordered_with_label_check_on_odd_even_sum() {
         &b,
         CompareOptions {
             mode: CompareMode::Unordered,
+            match_labels: false,
             label_check: Some(opbdiff::compare::ReferenceSide::B),
         },
     );

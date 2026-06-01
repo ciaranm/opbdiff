@@ -1,0 +1,103 @@
+* #variable= 24 #constraint= 58
+min: 1 i[colours][b0] 2 i[colours][b1] 4 i[colours][b2] ;
+preserved: i[vertex[0]][b0] i[vertex[0]][b1] i[vertex[0]][b2] i[vertex[1]][b0] i[vertex[1]][b1] i[vertex[1]][b2] i[vertex[2]][b0] i[vertex[2]][b1] i[vertex[2]][b2] i[vertex[3]][b0] i[vertex[3]][b1] i[vertex[3]][b2] i[vertex[4]][b0] i[vertex[4]][b1] i[vertex[4]][b2] i[vertex[5]][b0] i[vertex[5]][b1] i[vertex[5]][b2] i[vertex[6]][b0] i[vertex[6]][b1] i[vertex[6]][b2] i[colours][b0] i[colours][b1] i[colours][b2] ;
+1 i[vertex[0]][b0] 2 i[vertex[0]][b1] 4 i[vertex[0]][b2] >= 0 ;
+-1 i[vertex[0]][b0] -2 i[vertex[0]][b1] -4 i[vertex[0]][b2] >= -6 ;
+1 i[vertex[1]][b0] 2 i[vertex[1]][b1] 4 i[vertex[1]][b2] >= 0 ;
+-1 i[vertex[1]][b0] -2 i[vertex[1]][b1] -4 i[vertex[1]][b2] >= -6 ;
+1 i[vertex[2]][b0] 2 i[vertex[2]][b1] 4 i[vertex[2]][b2] >= 0 ;
+-1 i[vertex[2]][b0] -2 i[vertex[2]][b1] -4 i[vertex[2]][b2] >= -6 ;
+1 i[vertex[3]][b0] 2 i[vertex[3]][b1] 4 i[vertex[3]][b2] >= 0 ;
+-1 i[vertex[3]][b0] -2 i[vertex[3]][b1] -4 i[vertex[3]][b2] >= -6 ;
+1 i[vertex[4]][b0] 2 i[vertex[4]][b1] 4 i[vertex[4]][b2] >= 0 ;
+-1 i[vertex[4]][b0] -2 i[vertex[4]][b1] -4 i[vertex[4]][b2] >= -6 ;
+1 i[vertex[5]][b0] 2 i[vertex[5]][b1] 4 i[vertex[5]][b2] >= 0 ;
+-1 i[vertex[5]][b0] -2 i[vertex[5]][b1] -4 i[vertex[5]][b2] >= -6 ;
+1 i[vertex[6]][b0] 2 i[vertex[6]][b1] 4 i[vertex[6]][b2] >= 0 ;
+-1 i[vertex[6]][b0] -2 i[vertex[6]][b1] -4 i[vertex[6]][b2] >= -6 ;
+1 i[colours][b0] 2 i[colours][b1] 4 i[colours][b2] >= 0 ;
+-1 i[colours][b0] -2 i[colours][b1] -4 i[colours][b2] >= -6 ;
+* constraint ReifiedEquals greater option
+@c[edge_0_1][gt] 1 i[vertex[0]][b0] 2 i[vertex[0]][b1] 4 i[vertex[0]][b2] -1 i[vertex[1]][b0] -2 i[vertex[1]][b1] -4 i[vertex[1]][b2] 8 ~f[0][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[edge_0_1][lt] -1 i[vertex[0]][b0] -2 i[vertex[0]][b1] -4 i[vertex[0]][b2] 1 i[vertex[1]][b0] 2 i[vertex[1]][b1] 4 i[vertex[1]][b2] 8 f[0][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[edge_0_2][gt] 1 i[vertex[0]][b0] 2 i[vertex[0]][b1] 4 i[vertex[0]][b2] -1 i[vertex[2]][b0] -2 i[vertex[2]][b1] -4 i[vertex[2]][b2] 8 ~f[1][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[edge_0_2][lt] -1 i[vertex[0]][b0] -2 i[vertex[0]][b1] -4 i[vertex[0]][b2] 1 i[vertex[2]][b0] 2 i[vertex[2]][b1] 4 i[vertex[2]][b2] 8 f[1][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[edge_0_3][gt] 1 i[vertex[0]][b0] 2 i[vertex[0]][b1] 4 i[vertex[0]][b2] -1 i[vertex[3]][b0] -2 i[vertex[3]][b1] -4 i[vertex[3]][b2] 8 ~f[2][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[edge_0_3][lt] -1 i[vertex[0]][b0] -2 i[vertex[0]][b1] -4 i[vertex[0]][b2] 1 i[vertex[3]][b0] 2 i[vertex[3]][b1] 4 i[vertex[3]][b2] 8 f[2][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[edge_1_2][gt] 1 i[vertex[1]][b0] 2 i[vertex[1]][b1] 4 i[vertex[1]][b2] -1 i[vertex[2]][b0] -2 i[vertex[2]][b1] -4 i[vertex[2]][b2] 8 ~f[3][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[edge_1_2][lt] -1 i[vertex[1]][b0] -2 i[vertex[1]][b1] -4 i[vertex[1]][b2] 1 i[vertex[2]][b0] 2 i[vertex[2]][b1] 4 i[vertex[2]][b2] 8 f[3][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[edge_1_4][gt] 1 i[vertex[1]][b0] 2 i[vertex[1]][b1] 4 i[vertex[1]][b2] -1 i[vertex[4]][b0] -2 i[vertex[4]][b1] -4 i[vertex[4]][b2] 8 ~f[4][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[edge_1_4][lt] -1 i[vertex[1]][b0] -2 i[vertex[1]][b1] -4 i[vertex[1]][b2] 1 i[vertex[4]][b0] 2 i[vertex[4]][b1] 4 i[vertex[4]][b2] 8 f[4][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[edge_3_5][gt] 1 i[vertex[3]][b0] 2 i[vertex[3]][b1] 4 i[vertex[3]][b2] -1 i[vertex[5]][b0] -2 i[vertex[5]][b1] -4 i[vertex[5]][b2] 8 ~f[5][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[edge_3_5][lt] -1 i[vertex[3]][b0] -2 i[vertex[3]][b1] -4 i[vertex[3]][b2] 1 i[vertex[5]][b0] 2 i[vertex[5]][b1] 4 i[vertex[5]][b2] 8 f[5][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[edge_3_6][gt] 1 i[vertex[3]][b0] 2 i[vertex[3]][b1] 4 i[vertex[3]][b2] -1 i[vertex[6]][b0] -2 i[vertex[6]][b1] -4 i[vertex[6]][b2] 8 ~f[6][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[edge_3_6][lt] -1 i[vertex[3]][b0] -2 i[vertex[3]][b1] -4 i[vertex[3]][b2] 1 i[vertex[6]][b0] 2 i[vertex[6]][b1] 4 i[vertex[6]][b2] 8 f[6][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[edge_4_5][gt] 1 i[vertex[4]][b0] 2 i[vertex[4]][b1] 4 i[vertex[4]][b2] -1 i[vertex[5]][b0] -2 i[vertex[5]][b1] -4 i[vertex[5]][b2] 8 ~f[7][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[edge_4_5][lt] -1 i[vertex[4]][b0] -2 i[vertex[4]][b1] -4 i[vertex[4]][b2] 1 i[vertex[5]][b0] 2 i[vertex[5]][b1] 4 i[vertex[5]][b2] 8 f[7][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[edge_4_6][gt] 1 i[vertex[4]][b0] 2 i[vertex[4]][b1] 4 i[vertex[4]][b2] -1 i[vertex[6]][b0] -2 i[vertex[6]][b1] -4 i[vertex[6]][b2] 8 ~f[8][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[edge_4_6][lt] -1 i[vertex[4]][b0] -2 i[vertex[4]][b1] -4 i[vertex[4]][b2] 1 i[vertex[6]][b0] 2 i[vertex[6]][b1] 4 i[vertex[6]][b2] 8 f[8][ne] >= 1;
+* constraint ReifiedEquals greater option
+@c[edge_5_6][gt] 1 i[vertex[5]][b0] 2 i[vertex[5]][b1] 4 i[vertex[5]][b2] -1 i[vertex[6]][b0] -2 i[vertex[6]][b1] -4 i[vertex[6]][b2] 8 ~f[9][ne] >= 1;
+* constraint ReifiedEquals less option
+@c[edge_5_6][lt] -1 i[vertex[5]][b0] -2 i[vertex[5]][b1] -4 i[vertex[5]][b2] 1 i[vertex[6]][b0] 2 i[vertex[6]][b1] 4 i[vertex[6]][b2] 8 f[9][ne] >= 1;
+* constraint ArrayMinMax result compared to value
+@c[colours_def][0] -1 i[vertex[0]][b0] -2 i[vertex[0]][b1] -4 i[vertex[0]][b2] 1 i[colours][b0] 2 i[colours][b1] 4 i[colours][b2] >= 0;
+* constraint ArrayMinMax result compared to value
+@c[colours_def][1] -1 i[vertex[1]][b0] -2 i[vertex[1]][b1] -4 i[vertex[1]][b2] 1 i[colours][b0] 2 i[colours][b1] 4 i[colours][b2] >= 0;
+* constraint ArrayMinMax result compared to value
+@c[colours_def][2] -1 i[vertex[2]][b0] -2 i[vertex[2]][b1] -4 i[vertex[2]][b2] 1 i[colours][b0] 2 i[colours][b1] 4 i[colours][b2] >= 0;
+* constraint ArrayMinMax result compared to value
+@c[colours_def][3] -1 i[vertex[3]][b0] -2 i[vertex[3]][b1] -4 i[vertex[3]][b2] 1 i[colours][b0] 2 i[colours][b1] 4 i[colours][b2] >= 0;
+* constraint ArrayMinMax result compared to value
+@c[colours_def][4] -1 i[vertex[4]][b0] -2 i[vertex[4]][b1] -4 i[vertex[4]][b2] 1 i[colours][b0] 2 i[colours][b1] 4 i[colours][b2] >= 0;
+* constraint ArrayMinMax result compared to value
+@c[colours_def][5] -1 i[vertex[5]][b0] -2 i[vertex[5]][b1] -4 i[vertex[5]][b2] 1 i[colours][b0] 2 i[colours][b1] 4 i[colours][b2] >= 0;
+* constraint ArrayMinMax result compared to value
+@c[colours_def][6] -1 i[vertex[6]][b0] -2 i[vertex[6]][b1] -4 i[vertex[6]][b2] 1 i[colours][b0] 2 i[colours][b1] 4 i[colours][b2] >= 0;
+* constraint ArrayMinMax result is this value
+@c[colours_def][0le] 1 i[vertex[0]][b0] 2 i[vertex[0]][b1] 4 i[vertex[0]][b2] -1 i[colours][b0] -2 i[colours][b1] -4 i[colours][b2] 7 ~f[10][arrayminmax0] >= 0;
+* constraint ArrayMinMax result is this value
+@c[colours_def][0ge] -1 i[vertex[0]][b0] -2 i[vertex[0]][b1] -4 i[vertex[0]][b2] 1 i[colours][b0] 2 i[colours][b1] 4 i[colours][b2] 8 f[10][arrayminmax0] >= 1;
+* constraint ArrayMinMax result is this value
+@c[colours_def][1le] 1 i[vertex[1]][b0] 2 i[vertex[1]][b1] 4 i[vertex[1]][b2] -1 i[colours][b0] -2 i[colours][b1] -4 i[colours][b2] 7 ~f[11][arrayminmax1] >= 0;
+* constraint ArrayMinMax result is this value
+@c[colours_def][1ge] -1 i[vertex[1]][b0] -2 i[vertex[1]][b1] -4 i[vertex[1]][b2] 1 i[colours][b0] 2 i[colours][b1] 4 i[colours][b2] 8 f[11][arrayminmax1] >= 1;
+* constraint ArrayMinMax result is this value
+@c[colours_def][2le] 1 i[vertex[2]][b0] 2 i[vertex[2]][b1] 4 i[vertex[2]][b2] -1 i[colours][b0] -2 i[colours][b1] -4 i[colours][b2] 7 ~f[12][arrayminmax2] >= 0;
+* constraint ArrayMinMax result is this value
+@c[colours_def][2ge] -1 i[vertex[2]][b0] -2 i[vertex[2]][b1] -4 i[vertex[2]][b2] 1 i[colours][b0] 2 i[colours][b1] 4 i[colours][b2] 8 f[12][arrayminmax2] >= 1;
+* constraint ArrayMinMax result is this value
+@c[colours_def][3le] 1 i[vertex[3]][b0] 2 i[vertex[3]][b1] 4 i[vertex[3]][b2] -1 i[colours][b0] -2 i[colours][b1] -4 i[colours][b2] 7 ~f[13][arrayminmax3] >= 0;
+* constraint ArrayMinMax result is this value
+@c[colours_def][3ge] -1 i[vertex[3]][b0] -2 i[vertex[3]][b1] -4 i[vertex[3]][b2] 1 i[colours][b0] 2 i[colours][b1] 4 i[colours][b2] 8 f[13][arrayminmax3] >= 1;
+* constraint ArrayMinMax result is this value
+@c[colours_def][4le] 1 i[vertex[4]][b0] 2 i[vertex[4]][b1] 4 i[vertex[4]][b2] -1 i[colours][b0] -2 i[colours][b1] -4 i[colours][b2] 7 ~f[14][arrayminmax4] >= 0;
+* constraint ArrayMinMax result is this value
+@c[colours_def][4ge] -1 i[vertex[4]][b0] -2 i[vertex[4]][b1] -4 i[vertex[4]][b2] 1 i[colours][b0] 2 i[colours][b1] 4 i[colours][b2] 8 f[14][arrayminmax4] >= 1;
+* constraint ArrayMinMax result is this value
+@c[colours_def][5le] 1 i[vertex[5]][b0] 2 i[vertex[5]][b1] 4 i[vertex[5]][b2] -1 i[colours][b0] -2 i[colours][b1] -4 i[colours][b2] 7 ~f[15][arrayminmax5] >= 0;
+* constraint ArrayMinMax result is this value
+@c[colours_def][5ge] -1 i[vertex[5]][b0] -2 i[vertex[5]][b1] -4 i[vertex[5]][b2] 1 i[colours][b0] 2 i[colours][b1] 4 i[colours][b2] 8 f[15][arrayminmax5] >= 1;
+* constraint ArrayMinMax result is this value
+@c[colours_def][6le] 1 i[vertex[6]][b0] 2 i[vertex[6]][b1] 4 i[vertex[6]][b2] -1 i[colours][b0] -2 i[colours][b1] -4 i[colours][b2] 7 ~f[16][arrayminmax6] >= 0;
+* constraint ArrayMinMax result is this value
+@c[colours_def][6ge] -1 i[vertex[6]][b0] -2 i[vertex[6]][b1] -4 i[vertex[6]][b2] 1 i[colours][b0] 2 i[colours][b1] 4 i[colours][b2] 8 f[16][arrayminmax6] >= 1;
+* constraint ArrayMinMax result is one of the values
+@c[colours_def][al1] 1 f[10][arrayminmax0] 1 f[11][arrayminmax1] 1 f[12][arrayminmax2] 1 f[13][arrayminmax3] 1 f[14][arrayminmax4] 1 f[15][arrayminmax5] 1 f[16][arrayminmax6] >= 1;

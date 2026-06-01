@@ -1,5 +1,7 @@
 //! Comparison engine. Supports two matching modes (ordered by
-//! position, unordered by canonical-form multiset) and optional
+//! position, unordered by canonical-form multiset), an optional
+//! label-matching pre-pass (`match_labels`) that pairs constraints by
+//! shared label before falling back to the chosen mode, and optional
 //! directional label checking.
 //!
 //! See `dev_docs/0004-comparison-algorithm.md` for the algorithm.
@@ -40,6 +42,12 @@ pub enum ReferenceSide {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct CompareOptions {
     pub mode: CompareMode,
+    /// When true, constraints that share a label (present on both
+    /// sides) are paired up first, regardless of position, and the
+    /// content of each such pair is diffed. Constraints with no
+    /// matching label fall back to `mode`. See
+    /// `dev_docs/0004-comparison-algorithm.md`.
+    pub match_labels: bool,
     /// Some(reference) enables directional label checking.
     pub label_check: Option<ReferenceSide>,
 }
@@ -48,6 +56,9 @@ pub struct CompareOptions {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DiffResult {
     pub mode: CompareMode,
+    /// Whether constraints were paired by shared label before the
+    /// fallback `mode` matching ran. Reported for context only.
+    pub matched_by_label: bool,
     pub objective: ObjectiveDiff,
     pub preserved: PreservedDiff,
     pub constraints: Vec<ConstraintDiff>,
@@ -177,6 +188,7 @@ pub fn compare_ordered(a: &CanonicalFile, b: &CanonicalFile) -> DiffResult {
         b,
         CompareOptions {
             mode: CompareMode::Ordered,
+            match_labels: false,
             label_check: None,
         },
     )
@@ -185,9 +197,13 @@ pub fn compare_ordered(a: &CanonicalFile, b: &CanonicalFile) -> DiffResult {
 /// Compare two canonical files. Always produces a `DiffResult`; the
 /// callsite is responsible for interpreting the verdict.
 pub fn compare(a: &CanonicalFile, b: &CanonicalFile, options: CompareOptions) -> DiffResult {
-    let constraints = match options.mode {
-        CompareMode::Ordered => ordered_constraints(&a.constraints, &b.constraints),
-        CompareMode::Unordered => unordered_constraints(&a.constraints, &b.constraints),
+    let constraints = if options.match_labels {
+        label_matched_constraints(&a.constraints, &b.constraints, options.mode)
+    } else {
+        match options.mode {
+            CompareMode::Ordered => ordered_constraints(&a.constraints, &b.constraints),
+            CompareMode::Unordered => unordered_constraints(&a.constraints, &b.constraints),
+        }
     };
 
     let constraints = if let Some(reference) = options.label_check {
@@ -198,6 +214,7 @@ pub fn compare(a: &CanonicalFile, b: &CanonicalFile, options: CompareOptions) ->
 
     DiffResult {
         mode: options.mode,
+        matched_by_label: options.match_labels,
         objective: compare_objectives(&a.objective, &b.objective),
         preserved: compare_preserved(&a.preserved, &b.preserved),
         constraints,
@@ -302,6 +319,130 @@ fn unordered_constraints(
     }
 
     out
+}
+
+/// Label-matched mode: pair constraints that share a label, then fall
+/// back to `mode` for the rest.
+///
+/// Pass 1 walks A in order; for each A constraint that carries a label
+/// also present (and still unclaimed) in B, the two are paired — a
+/// `Match` if their canonical forms agree, a `Differ` otherwise.
+/// Duplicate labels are paired first-come-first-served (FIFO over B's
+/// occurrences), though VeriPB labels are normally unique.
+///
+/// Pass 2 takes everything left unpaired — A constraints with no label,
+/// or whose label is absent from B, and the corresponding remainder of
+/// B — and runs the ordinary `mode` matching over those two
+/// subsequences, then maps the sub-indices back to original positions.
+///
+/// Label-matched pairs are emitted first (in A order), followed by the
+/// fallback diffs.
+fn label_matched_constraints(
+    a: &[CanonicalLabelledConstraint],
+    b: &[CanonicalLabelledConstraint],
+    mode: CompareMode,
+) -> Vec<ConstraintDiff> {
+    let mut b_by_label: HashMap<&str, Vec<usize>> = HashMap::new();
+    for (i, bc) in b.iter().enumerate() {
+        if let Some(label) = bc.label.as_deref() {
+            b_by_label.entry(label).or_default().push(i);
+        }
+    }
+
+    let mut out = Vec::new();
+    let mut b_claimed = vec![false; b.len()];
+    let mut leftover_a: Vec<usize> = Vec::new();
+
+    for (ai, ac) in a.iter().enumerate() {
+        let bi = ac.label.as_deref().and_then(|label| {
+            b_by_label
+                .get_mut(label)
+                .filter(|q| !q.is_empty())
+                .map(|q| q.remove(0))
+        });
+        match bi {
+            Some(bi) => {
+                b_claimed[bi] = true;
+                let bc = &b[bi];
+                out.push(if ac.form == bc.form {
+                    ConstraintDiff::Match {
+                        index_a: ai,
+                        index_b: bi,
+                        a: ac.clone(),
+                        b: bc.clone(),
+                    }
+                } else {
+                    ConstraintDiff::Differ {
+                        index_a: ai,
+                        index_b: bi,
+                        a: ac.clone(),
+                        b: bc.clone(),
+                    }
+                });
+            }
+            None => leftover_a.push(ai),
+        }
+    }
+
+    let leftover_b: Vec<usize> = (0..b.len()).filter(|&i| !b_claimed[i]).collect();
+
+    // Diff the unpaired remainders with the ordinary mode, working on
+    // owned subsequences, then translate sub-indices back.
+    let a_sub: Vec<CanonicalLabelledConstraint> =
+        leftover_a.iter().map(|&i| a[i].clone()).collect();
+    let b_sub: Vec<CanonicalLabelledConstraint> =
+        leftover_b.iter().map(|&i| b[i].clone()).collect();
+    let sub = match mode {
+        CompareMode::Ordered => ordered_constraints(&a_sub, &b_sub),
+        CompareMode::Unordered => unordered_constraints(&a_sub, &b_sub),
+    };
+
+    out.extend(
+        sub.into_iter()
+            .map(|d| remap_indices(d, &leftover_a, &leftover_b)),
+    );
+    out
+}
+
+/// Translate the A/B indices in a fallback-pass `ConstraintDiff` from
+/// positions in the leftover subsequences back to positions in the
+/// original files.
+fn remap_indices(d: ConstraintDiff, a_idx: &[usize], b_idx: &[usize]) -> ConstraintDiff {
+    match d {
+        ConstraintDiff::Match {
+            index_a,
+            index_b,
+            a,
+            b,
+        } => ConstraintDiff::Match {
+            index_a: a_idx[index_a],
+            index_b: b_idx[index_b],
+            a,
+            b,
+        },
+        ConstraintDiff::Differ {
+            index_a,
+            index_b,
+            a,
+            b,
+        } => ConstraintDiff::Differ {
+            index_a: a_idx[index_a],
+            index_b: b_idx[index_b],
+            a,
+            b,
+        },
+        ConstraintDiff::OnlyInA { index, a } => ConstraintDiff::OnlyInA {
+            index: a_idx[index],
+            a,
+        },
+        ConstraintDiff::OnlyInB { index, b } => ConstraintDiff::OnlyInB {
+            index: b_idx[index],
+            b,
+        },
+        // The fallback passes never emit LabelMismatch; label checking
+        // is applied later, in `compare`.
+        ConstraintDiff::LabelMismatch { .. } => d,
+    }
 }
 
 fn apply_label_check(
@@ -441,6 +582,7 @@ mod tests {
             b,
             CompareOptions {
                 mode: CompareMode::Unordered,
+                match_labels: false,
                 label_check: None,
             },
         )
@@ -499,6 +641,7 @@ mod tests {
             b,
             CompareOptions {
                 mode,
+                match_labels: false,
                 label_check: Some(reference),
             },
         )
@@ -550,6 +693,108 @@ mod tests {
         let diff = with_label_check(&a, &b, CompareMode::Ordered, ReferenceSide::B);
         assert!(!diff.is_equivalent());
         assert_eq!(diff.summary().label_mismatches, 1);
+    }
+
+    // ----- label-matched mode -----------------------------------------
+
+    fn match_labels(a: &CanonicalFile, b: &CanonicalFile, mode: CompareMode) -> DiffResult {
+        compare(
+            a,
+            b,
+            CompareOptions {
+                mode,
+                match_labels: true,
+                label_check: None,
+            },
+        )
+    }
+
+    #[test]
+    fn match_labels_pairs_same_label_across_positions() {
+        // Same labels, opposite order, content differs per label. Each
+        // label pairs up and reports a content difference; nothing is
+        // OnlyInA / OnlyInB.
+        let a = canonical("@p 1 x1 >= 1 ;\n@q 1 x2 >= 1 ;\n");
+        let b = canonical("@q 1 x9 >= 1 ;\n@p 1 x8 >= 1 ;\n");
+        let diff = match_labels(&a, &b, CompareMode::Ordered);
+        let s = diff.summary();
+        assert_eq!(s.differing, 2, "summary: {s:?}");
+        assert_eq!(s.only_in_a, 0);
+        assert_eq!(s.only_in_b, 0);
+        // The @p pair should reference x1 (A) and x8 (B), proving the
+        // pairing was by label rather than by position.
+        let p = diff
+            .constraints
+            .iter()
+            .find_map(|d| match d {
+                ConstraintDiff::Differ { a, b, .. } if a.label.as_deref() == Some("p") => {
+                    Some((a.clone(), b.clone()))
+                }
+                _ => None,
+            })
+            .expect("a Differ for label p");
+        assert_eq!(p.0.form.terms[0].0, "x1");
+        assert_eq!(p.1.form.terms[0].0, "x8");
+    }
+
+    #[test]
+    fn match_labels_reports_match_when_content_agrees() {
+        let a = canonical("@p 1 x1 >= 1 ;\n@q 1 x2 >= 1 ;\n");
+        let b = canonical("@q 1 x2 >= 1 ;\n@p +1 ~x1 <= 0 ;\n");
+        let diff = match_labels(&a, &b, CompareMode::Ordered);
+        assert!(diff.is_equivalent(), "summary: {:?}", diff.summary());
+        assert_eq!(diff.summary().matches, 2);
+    }
+
+    #[test]
+    fn match_labels_falls_back_to_mode_for_unlabelled() {
+        // @p pairs by label (content differs). The unlabelled bound
+        // constraints have no label to match on, so they fall through
+        // to the fallback mode: unordered matches them by canonical
+        // form even though A and B list them in opposite order.
+        let a = canonical("1 x1 >= 0 ;\n@p 1 x2 >= 1 ;\n1 x3 >= 0 ;\n");
+        let b = canonical("1 x3 >= 0 ;\n@p 1 x9 >= 1 ;\n1 x1 >= 0 ;\n");
+        let diff = match_labels(&a, &b, CompareMode::Unordered);
+        let s = diff.summary();
+        assert_eq!(s.matches, 2, "the two unlabelled bounds: {s:?}");
+        assert_eq!(s.differing, 1, "the @p pair");
+        assert_eq!(s.only_in_a, 0);
+        assert_eq!(s.only_in_b, 0);
+    }
+
+    #[test]
+    fn match_labels_unmatched_label_becomes_leftover() {
+        // @only exists in A but not B; it falls back to mode matching
+        // and (no canonical partner in B) becomes OnlyInA.
+        let a = canonical("@only 1 x1 >= 1 ;\n");
+        let b = canonical("@other 1 x2 >= 1 ;\n");
+        let diff = match_labels(&a, &b, CompareMode::Unordered);
+        let s = diff.summary();
+        assert_eq!(s.differing, 0);
+        assert_eq!(s.only_in_a, 1);
+        assert_eq!(s.only_in_b, 1);
+    }
+
+    #[test]
+    fn match_labels_remaps_indices_to_original_positions() {
+        // The fallback pass works on subsequences; its indices must be
+        // translated back. Here the only unlabelled constraint sits at
+        // original A index 1 / B index 1.
+        let a = canonical("@p 1 x1 >= 1 ;\n1 z >= 5 ;\n");
+        let b = canonical("@p 1 x1 >= 1 ;\n1 w >= 5 ;\n");
+        let diff = match_labels(&a, &b, CompareMode::Ordered);
+        let leftover = diff
+            .constraints
+            .iter()
+            .find(|d| matches!(d, ConstraintDiff::Differ { a, .. } if a.label.is_none()))
+            .expect("a Differ for the unlabelled pair");
+        if let ConstraintDiff::Differ {
+            index_a, index_b, ..
+        } = leftover
+        {
+            assert_eq!(*index_a, 1);
+            assert_eq!(*index_b, 1);
+        }
     }
 
     #[test]

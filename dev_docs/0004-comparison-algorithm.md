@@ -1,6 +1,6 @@
 # Comparison algorithm
 
-> Drafted by AI assistant under human oversight. Last updated 2026-05-29.
+> Drafted by AI assistant under human oversight. Last updated 2026-06-01.
 
 The comparison engine consumes two canonical models and produces a
 structured diff result. This document defines its behaviour.
@@ -45,6 +45,43 @@ appears in the appropriate only-in-X bucket.
 
 When `--check-labels` and `--unordered` combine, label checking is
 applied to each matched pair after multiset alignment.
+
+## Constraint comparison: label-matched (`--match-labels`)
+
+`--match-labels` changes *how constraints are paired*, orthogonally to
+ordered/unordered (which still governs the leftovers) and to
+`--check-labels` (which still post-checks labels on the pairs).
+
+The pairing runs in two passes:
+
+1. **Label pass.** Walk A in order. For each A constraint carrying a
+   label that is also present (and not yet claimed) in B, pair the two
+   immediately. The pair is **matched** if their canonical forms
+   agree, **differing** otherwise. Duplicate labels — which VeriPB
+   does not normally emit — are paired first-come-first-served over
+   B's occurrences.
+2. **Fallback pass.** Everything left unpaired (A constraints with no
+   label, or whose label is absent from B, together with the
+   corresponding remainder of B) is run through the ordinary
+   ordered/unordered matching. Sub-indices from this pass are
+   translated back to original file positions before reporting.
+
+Label-matched pairs are emitted first (in A order), then the fallback
+diffs.
+
+This mode is the right tool when two encoders **agree on labels but
+disagree on order or on auxiliary-variable names**. The label pins the
+pairing so the diff lands on the genuinely-differing content rather
+than on a positional misalignment. Typical invocation for
+cross-encoder comparison is `--match-labels --unordered`, so that
+constraints which carry no label on one side (e.g. variable bounds that
+one encoder labels and the other does not) still align by canonical
+form rather than by position.
+
+Note that `--match-labels` pairs constraints with *equal* labels; it
+never equates differently-labelled constraints. Differently- or
+one-sidedly-labelled pairs are surfaced as content/leftover
+differences here, and as explicit mismatches under `--check-labels`.
 
 ## Label handling (`--check-labels`)
 
@@ -93,7 +130,11 @@ mapping file, by structural inference, or by graph-isomorphism over
 the constraint set) is a future feature that needs its own design.
 Until then, the comparison engine will correctly report these as
 differing, and the human can see from the diff that the difference
-is confined to aux-var names.
+is confined to aux-var names. `--match-labels` makes this much easier
+to read when the two sides share labels: the differing constraints are
+paired up by label and the canonical-form view shows only the renamed
+aux variables (one side `(absent)`, the other carrying the coefficient)
+against a count of identical rows.
 
 ## Verdict and exit code
 

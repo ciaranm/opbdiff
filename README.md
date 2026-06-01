@@ -32,6 +32,9 @@ What works:
   to the RHS, zero-coefficient terms dropped, lexicographic sort. See
   [`dev_docs/0003-normalization.md`](dev_docs/0003-normalization.md).
 - Ordered (by position) and `--unordered` (multiset) comparison.
+- `--match-labels`: pair constraints by shared label first, then diff
+  each pair's contents (with the remainder handled by the fallback
+  mode).
 - Directional `--check-labels` with `--reference A|B`.
 - Plain-text reporter with a per-position breakdown and a summary line.
 - 0 / 1 / 2 exit codes for use in scripts and tests.
@@ -70,6 +73,7 @@ Options:
 | Flag                          | Effect                                                          |
 |-------------------------------|-----------------------------------------------------------------|
 | `-u`, `--unordered`           | Compare constraints as multisets (ignore order).                |
+| `-m`, `--match-labels`        | Pair constraints by shared label first, then diff their contents; unmatched constraints fall back to the (un)ordered matching. |
 | `-L`, `--check-labels`        | Enforce reference-side labels on the candidate.                 |
 | `-r`, `--reference <A\|B>`    | Which side is the label reference (default `B`).                |
 | `--color <auto\|always\|never>` | When to emit ANSI colour. `auto` honours TTY and `NO_COLOR`.   |
@@ -100,6 +104,24 @@ Ignoring constraint order:
 ```
 $ opbdiff --unordered a.opb b.opb
 Files are semantically equivalent (14 constraints compared, unordered).
+```
+
+Pairing by label, then diffing each pair's contents. This is the most
+useful mode when two encoders agree on labels but differ in constraint
+order or in auxiliary-variable names — the label pins the pairing and
+the canonical-form view isolates what actually differs:
+
+```
+$ opbdiff --match-labels --unordered a.opb b.opb
+Differing at constraint #17 [@c[edge_0_1][gt]] (A line 21, B line 18):
+  A: @c[edge_0_1][gt] ... 8 ~f[0][ne] >= 1 ;
+  B: @c[edge_0_1][gt] ... 8 ~b[edge_0_1][ne] >= 1 ;
+  canonical-form view (sorted):
+    b[edge_0_1][ne]   A=(absent)   B=-8
+    f[0][ne]          A=-8         B=(absent)
+    (7 identical rows hidden)
+...
+Summary (label-matched, unordered fallback): 16 matches, 28 differing, 0 only in A, 0 only in B.
 ```
 
 Enforcing labels with `b.opb` as the reference:

@@ -54,7 +54,7 @@ pub fn write(out: &mut dyn io::Write, diff: &DiffResult) -> io::Result<()> {
         write!(
             out,
             "{HEADING}Summary ({mode}): {m} matches, {d} differing, {a} only in A, {b} only in B",
-            mode = mode_label(diff.mode),
+            mode = mode_descriptor(diff),
             m = summary.matches,
             d = summary.differing,
             a = summary.only_in_a,
@@ -78,7 +78,7 @@ pub fn write(out: &mut dyn io::Write, diff: &DiffResult) -> io::Result<()> {
             out,
             "{SUCCESS}Files are semantically equivalent ({} constraints compared, {mode}).{SUCCESS:#}",
             summary.matches,
-            mode = mode_label(diff.mode),
+            mode = mode_descriptor(diff),
         )?;
     }
 
@@ -89,6 +89,16 @@ fn mode_label(mode: CompareMode) -> &'static str {
     match mode {
         CompareMode::Ordered => "ordered",
         CompareMode::Unordered => "unordered",
+    }
+}
+
+/// Human description of how constraints were paired, e.g. `ordered` or
+/// `label-matched, unordered fallback`.
+fn mode_descriptor(diff: &DiffResult) -> String {
+    if diff.matched_by_label {
+        format!("label-matched, {} fallback", mode_label(diff.mode))
+    } else {
+        mode_label(diff.mode).to_string()
     }
 }
 
@@ -155,10 +165,11 @@ fn write_constraint(
             let _ = (mode, index_b);
             writeln!(
                 out,
-                "{HEADING}Differing at constraint #{} (A line {}, B line {}):{HEADING:#}",
+                "{HEADING}Differing at constraint #{}{label} (A line {}, B line {}):{HEADING:#}",
                 index_a + 1,
                 a.line,
                 b.line,
+                label = shared_label_tag(a.label.as_deref(), b.label.as_deref()),
             )?;
             writeln!(out, "{A_LINE}  A: {}{A_LINE:#}", a.raw.trim())?;
             writeln!(out, "{B_LINE}  B: {}{B_LINE:#}", b.raw.trim())?;
@@ -221,6 +232,17 @@ fn write_constraint(
             writeln!(out, "{B_LINE}  B: {}{B_LINE:#}", b.raw.trim())?;
             Ok(Some(()))
         }
+    }
+}
+
+/// A ` [@label]` tag for the `Differ` header when both sides carry the
+/// same label (the usual case under label-matched mode). Empty
+/// otherwise, to avoid noise — differing or one-sided labels are the
+/// concern of `--check-labels`, not the content diff.
+fn shared_label_tag(a: Option<&str>, b: Option<&str>) -> String {
+    match (a, b) {
+        (Some(la), Some(lb)) if la == lb => format!(" [@{la}]"),
+        _ => String::new(),
     }
 }
 
@@ -452,6 +474,7 @@ mod tests {
             "1 x2 >= 1 ;\n",
             CompareOptions {
                 mode: CompareMode::Unordered,
+                match_labels: false,
                 label_check: None,
             },
         )));
@@ -505,6 +528,7 @@ mod tests {
             "@card 1 x1 >= 1 ;\n",
             CompareOptions {
                 mode: CompareMode::Ordered,
+                match_labels: false,
                 label_check: Some(ReferenceSide::B),
             },
         )));

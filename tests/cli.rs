@@ -84,6 +84,38 @@ fn odd_even_sum_pair_exits_zero_under_unordered_mode() {
 }
 
 #[test]
+fn match_labels_pairs_by_label_regardless_of_order() {
+    // Same two labels in opposite order; label-matching pairs them and
+    // reports them equivalent without needing --unordered.
+    let a = write_tmp("ml_a.opb", "@p 1 x1 >= 1 ;\n@q 1 x2 >= 1 ;\n");
+    let b = write_tmp("ml_b.opb", "@q 1 x2 >= 1 ;\n@p 1 x1 >= 1 ;\n");
+    let mut cmd = Command::cargo_bin("opbdiff").expect("binary built");
+    cmd.arg("--match-labels")
+        .arg(&a)
+        .arg(&b)
+        .assert()
+        .success()
+        .stdout(contains("label-matched"));
+}
+
+#[test]
+fn match_labels_shows_label_tag_and_content_diff() {
+    // Same label, content differs by one variable name. The header
+    // carries the shared label tag and the canonical view isolates
+    // the difference.
+    let a = write_tmp("mld_a.opb", "@edge 1 x1 8 a >= 1 ;\n");
+    let b = write_tmp("mld_b.opb", "@edge 1 x1 8 c >= 1 ;\n");
+    let mut cmd = Command::cargo_bin("opbdiff").expect("binary built");
+    cmd.arg("--match-labels")
+        .arg(&a)
+        .arg(&b)
+        .assert()
+        .code(1)
+        .stdout(contains("[@edge]"))
+        .stdout(contains("canonical-form view"));
+}
+
+#[test]
 fn check_labels_with_explicit_reference_flag() {
     let a = write_tmp("labels_a.opb", "1 x1 >= 1 ;\n");
     let b = write_tmp("labels_b.opb", "@card 1 x1 >= 1 ;\n");

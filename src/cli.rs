@@ -27,6 +27,14 @@ pub struct Args {
     #[arg(short, long)]
     pub unordered: bool,
 
+    /// Pair constraints that share a label before diffing, regardless
+    /// of position; then compare the content of each pair. Constraints
+    /// with no matching label fall back to the ordered/`--unordered`
+    /// matching. Useful for lining up two encoders that agree on
+    /// labels but differ in order or auxiliary-variable names.
+    #[arg(short = 'm', long)]
+    pub match_labels: bool,
+
     /// Check that labels on the reference side are honoured by the
     /// candidate side. Extra labels on the candidate side that
     /// correspond to an unlabelled reference-side constraint are
@@ -88,6 +96,7 @@ impl Args {
             } else {
                 CompareMode::Ordered
             },
+            match_labels: self.match_labels,
             label_check: if self.check_labels {
                 Some(self.reference.into())
             } else {
