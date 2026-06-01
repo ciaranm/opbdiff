@@ -13,7 +13,7 @@ use std::process::ExitCode;
 use anyhow::{Context, Result};
 use clap::Parser as _;
 
-use opbdiff::compare::compare;
+use opbdiff::compare::{compare, resolve_aux_projection};
 use opbdiff::model::{CanonicalFile, normalise_file};
 use opbdiff::parser::parse;
 use opbdiff::report::plain;
@@ -34,7 +34,15 @@ fn main() -> ExitCode {
 fn run(args: &cli::Args) -> Result<bool> {
     let a = load(&args.a)?;
     let b = load(&args.b)?;
-    let diff = compare(&a, &b, args.compare_options());
+
+    let mut options = args.compare_options();
+    if args.ignore_aux_names {
+        let projection = resolve_aux_projection(&a, &b)
+            .context("resolving the projected-variable set for --ignore-aux-names")?;
+        options.aux_projection = Some(projection);
+    }
+
+    let diff = compare(&a, &b, options);
 
     let stdout = std::io::stdout();
     let handle = stdout.lock();

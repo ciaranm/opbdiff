@@ -35,6 +35,9 @@ What works:
 - `--match-labels`: pair constraints by shared label first, then diff
   each pair's contents (with the remainder handled by the fallback
   mode).
+- `--ignore-aux-names`: fold auxiliary-variable names (anything outside
+  the projected `preserved:` set) so constraints that differ only in
+  the names of their auxiliary variables compare equal.
 - Directional `--check-labels` with `--reference A|B`.
 - Plain-text reporter with a per-position breakdown and a summary line.
 - 0 / 1 / 2 exit codes for use in scripts and tests.
@@ -45,9 +48,11 @@ Documented v1 limitations:
   Practical concern is low; rationale in
   [`dev_docs/0003-normalization.md`](dev_docs/0003-normalization.md).
 - Auxiliary-variable name differences across the two files are
-  surfaced rather than silently equated. This is deliberate, since
-  spotting them is part of the use-case; a future opt-in flag may add
-  scoped aliasing.
+  surfaced by default rather than silently equated, since spotting them
+  is part of the use-case. Opt in to folding them with
+  `--ignore-aux-names`, which compares auxiliary terms by coefficient
+  only. Note this is a per-constraint check: it does not verify a
+  single globally-consistent renaming of the auxiliary variables.
 - Plain-text and colour-aware reporters ship; JSON and side-by-side
   are sketched in
   [`dev_docs/0005-output-formats.md`](dev_docs/0005-output-formats.md).
@@ -74,6 +79,7 @@ Options:
 |-------------------------------|-----------------------------------------------------------------|
 | `-u`, `--unordered`           | Compare constraints as multisets (ignore order).                |
 | `-m`, `--match-labels`        | Pair constraints by shared label first, then diff their contents; unmatched constraints fall back to the (un)ordered matching. |
+| `--ignore-aux-names`          | Treat any variable not in the projected (`preserved:`) set as auxiliary and compare it by coefficient only, so differences in auxiliary-variable *names* don't count. Needs a `preserved:` line on at least one file (both must agree). |
 | `-L`, `--check-labels`        | Enforce reference-side labels on the candidate.                 |
 | `-r`, `--reference <A\|B>`    | Which side is the label reference (default `B`).                |
 | `--color <auto\|always\|never>` | When to emit ANSI colour. `auto` honours TTY and `NO_COLOR`.   |
@@ -123,6 +129,25 @@ Differing at constraint #17 [@c[edge_0_1][gt]] (A line 21, B line 18):
 ...
 Summary (label-matched, unordered fallback): 16 matches, 28 differing, 0 only in A, 0 only in B.
 ```
+
+Ignoring auxiliary-variable names. When two encoders introduce the
+same auxiliary variables under different names (e.g. `f[10][…]` vs
+`x[colours_def][0]`), folding them away leaves only the genuine
+differences:
+
+```
+$ opbdiff --unordered --ignore-aux-names a.opb b.opb
+Only in A (line 77):
+  A: @c[colours_def][0ge] ... 8 f[10][arrayminmax0] >= 1 ;
+...
+Summary (unordered, aux names ignored): 51 matches, 0 differing, 7 only in A, 0 only in B, objective differs, preserved differs.
+```
+
+Here only the truly structural difference survives the fold (one
+encoder emits a reverse-reification half the other omits), plus the
+objective and `preserved:` differences. "Auxiliary" means any variable
+not in the projected `preserved:` set; at least one file must carry
+that line, and if both do they must agree.
 
 Enforcing labels with `b.opb` as the reference:
 

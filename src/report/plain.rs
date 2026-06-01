@@ -8,6 +8,7 @@
 //! still work, because the substrings are present *between* the SGR
 //! pairs.
 
+use std::collections::HashSet;
 use std::io;
 
 use anstyle::{AnsiColor, Color, Style};
@@ -43,7 +44,7 @@ pub fn write(out: &mut dyn io::Write, diff: &DiffResult) -> io::Result<()> {
         wrote_any_diff = true;
     }
     for d in &diff.constraints {
-        if write_constraint(out, d, diff.mode)?.is_some() {
+        if write_constraint(out, d, diff.mode, diff.aux_projection.as_ref())?.is_some() {
             wrote_any_diff = true;
         }
     }
@@ -95,11 +96,15 @@ fn mode_label(mode: CompareMode) -> &'static str {
 /// Human description of how constraints were paired, e.g. `ordered` or
 /// `label-matched, unordered fallback`.
 fn mode_descriptor(diff: &DiffResult) -> String {
-    if diff.matched_by_label {
+    let mut s = if diff.matched_by_label {
         format!("label-matched, {} fallback", mode_label(diff.mode))
     } else {
         mode_label(diff.mode).to_string()
+    };
+    if diff.aux_projection.is_some() {
+        s.push_str(", aux names ignored");
     }
+    s
 }
 
 // ---- per-section writers ---------------------------------------------
@@ -152,6 +157,7 @@ fn write_constraint(
     out: &mut dyn io::Write,
     d: &ConstraintDiff,
     mode: CompareMode,
+    projection: Option<&HashSet<String>>,
 ) -> io::Result<Option<()>> {
     match d {
         ConstraintDiff::Match { .. } => Ok(None),
@@ -173,7 +179,7 @@ fn write_constraint(
             )?;
             writeln!(out, "{A_LINE}  A: {}{A_LINE:#}", a.raw.trim())?;
             writeln!(out, "{B_LINE}  B: {}{B_LINE:#}", b.raw.trim())?;
-            write_canonical_diff(out, &a.form, &b.form)?;
+            write_canonical_diff(out, &a.form, &b.form, projection)?;
             Ok(Some(()))
         }
 
@@ -253,20 +259,50 @@ fn shared_label_tag(a: Option<&str>, b: Option<&str>) -> String {
 /// both sides agree are summarised as a count rather than printed
 /// in full, so a 100-term constraint with one differing coefficient
 /// shows one row.
+///
+/// When `projection` is `Some`, auxiliary terms (variables not in the
+/// projected set) are not compared by name: they are collapsed into a
+/// single folded row showing each side's sorted multiset of auxiliary
+/// coefficients, and shown only if those multisets differ.
 fn write_canonical_diff(
     out: &mut dyn io::Write,
     a: &CanonicalConstraint,
     b: &CanonicalConstraint,
+    projection: Option<&HashSet<String>>,
 ) -> io::Result<()> {
-    let rows = collect_canonical_rows(a, b);
+    let is_real = |v: &str| projection.is_none_or(|p| p.contains(v));
+
+    let real_a: Vec<(String, i64)> = a
+        .terms
+        .iter()
+        .filter(|(v, _)| is_real(v))
+        .cloned()
+        .collect();
+    let real_b: Vec<(String, i64)> = b
+        .terms
+        .iter()
+        .filter(|(v, _)| is_real(v))
+        .cloned()
+        .collect();
+
+    let rows = collect_canonical_rows(&real_a, a.rhs, &real_b, b.rhs);
     let differing: Vec<&Row> = rows.iter().filter(|r| r.differs()).collect();
     let identical_count = rows.len() - differing.len();
 
-    if differing.is_empty() {
+    let aux_a = aux_coefficients(a, projection);
+    let aux_b = aux_coefficients(b, projection);
+    let aux_differs = aux_a != aux_b;
+
+    if differing.is_empty() && !aux_differs {
         return Ok(());
     }
 
-    writeln!(out, "  {HEADING}canonical-form view (sorted):{HEADING:#}",)?;
+    let heading = if projection.is_some() {
+        "canonical-form view (sorted, aux names ignored):"
+    } else {
+        "canonical-form view (sorted):"
+    };
+    writeln!(out, "  {HEADING}{heading}{HEADING:#}")?;
 
     let var_width = differing
         .iter()
@@ -292,12 +328,45 @@ fn write_canonical_diff(
         )?;
     }
 
+    if aux_differs {
+        writeln!(
+            out,
+            "    aux (names ignored): {A_LINE}A={a}{A_LINE:#}   {B_LINE}B={b}{B_LINE:#}",
+            a = format_aux_list(&aux_a),
+            b = format_aux_list(&aux_b),
+        )?;
+    }
+
     if identical_count > 0 {
         let plural = if identical_count == 1 { "" } else { "s" };
         writeln!(out, "    ({identical_count} identical row{plural} hidden)",)?;
     }
 
     Ok(())
+}
+
+/// Sorted multiset of the coefficients of `c`'s auxiliary terms (those
+/// whose variable is not in `projection`). Empty when not folding.
+fn aux_coefficients(c: &CanonicalConstraint, projection: Option<&HashSet<String>>) -> Vec<i64> {
+    let Some(p) = projection else {
+        return Vec::new();
+    };
+    let mut coefs: Vec<i64> = c
+        .terms
+        .iter()
+        .filter(|(v, _)| !p.contains(v))
+        .map(|(_, coef)| *coef)
+        .collect();
+    coefs.sort_unstable();
+    coefs
+}
+
+fn format_aux_list(coefs: &[i64]) -> String {
+    if coefs.is_empty() {
+        return "(none)".to_string();
+    }
+    let parts: Vec<String> = coefs.iter().map(|c| format!("{c:+}")).collect();
+    format!("[{}]", parts.join(", "))
 }
 
 struct Row {
@@ -312,13 +381,18 @@ impl Row {
     }
 }
 
-fn collect_canonical_rows(a: &CanonicalConstraint, b: &CanonicalConstraint) -> Vec<Row> {
-    let mut rows = Vec::with_capacity(a.terms.len() + b.terms.len() + 1);
+fn collect_canonical_rows(
+    a_terms: &[(String, i64)],
+    a_rhs: i64,
+    b_terms: &[(String, i64)],
+    b_rhs: i64,
+) -> Vec<Row> {
+    let mut rows = Vec::with_capacity(a_terms.len() + b_terms.len() + 1);
     let mut i = 0;
     let mut j = 0;
-    while i < a.terms.len() && j < b.terms.len() {
-        let (va, ca) = &a.terms[i];
-        let (vb, cb) = &b.terms[j];
+    while i < a_terms.len() && j < b_terms.len() {
+        let (va, ca) = &a_terms[i];
+        let (vb, cb) = &b_terms[j];
         match va.as_str().cmp(vb.as_str()) {
             std::cmp::Ordering::Less => {
                 rows.push(Row {
@@ -347,8 +421,8 @@ fn collect_canonical_rows(a: &CanonicalConstraint, b: &CanonicalConstraint) -> V
             }
         }
     }
-    while i < a.terms.len() {
-        let (va, ca) = &a.terms[i];
+    while i < a_terms.len() {
+        let (va, ca) = &a_terms[i];
         rows.push(Row {
             var: va.clone(),
             a: Some(*ca),
@@ -356,8 +430,8 @@ fn collect_canonical_rows(a: &CanonicalConstraint, b: &CanonicalConstraint) -> V
         });
         i += 1;
     }
-    while j < b.terms.len() {
-        let (vb, cb) = &b.terms[j];
+    while j < b_terms.len() {
+        let (vb, cb) = &b_terms[j];
         rows.push(Row {
             var: vb.clone(),
             a: None,
@@ -367,8 +441,8 @@ fn collect_canonical_rows(a: &CanonicalConstraint, b: &CanonicalConstraint) -> V
     }
     rows.push(Row {
         var: "rhs".to_string(),
-        a: Some(a.rhs),
-        b: Some(b.rhs),
+        a: Some(a_rhs),
+        b: Some(b_rhs),
     });
     rows
 }
@@ -476,6 +550,7 @@ mod tests {
                 mode: CompareMode::Unordered,
                 match_labels: false,
                 label_check: None,
+                aux_projection: None,
             },
         )));
         assert!(plain.contains("Only in A (line"));
@@ -522,6 +597,36 @@ mod tests {
     }
 
     #[test]
+    fn aux_folding_view_folds_aux_and_notes_in_descriptor() {
+        // x is projected; the aux vars (f vs g) differ in name, and the
+        // rhs differs too, so this stays a Differ. The folded view
+        // should show the projected rhs row and a single folded aux row
+        // rather than per-aux-name rows, and the summary should say
+        // "aux names ignored".
+        let projection: HashSet<String> = ["x".to_string()].into_iter().collect();
+        let plain = strip_ansi(&render(&diff_with(
+            "preserved: x ;\n1 x 8 f >= 1 ;\n",
+            "preserved: x ;\n1 x 7 g >= 2 ;\n",
+            CompareOptions {
+                mode: CompareMode::Ordered,
+                match_labels: false,
+                label_check: None,
+                aux_projection: Some(projection),
+            },
+        )));
+        assert!(plain.contains("aux names ignored"), "got: {plain}");
+        // The folded aux row carries the coefficient multisets by side,
+        // not per-name rows.
+        assert!(
+            plain.contains("aux (names ignored): A=[+8]"),
+            "got: {plain}"
+        );
+        assert!(plain.contains("B=[+7]"), "got: {plain}");
+        // The projected rhs difference is still shown by name/row.
+        assert!(plain.contains("rhs"), "got: {plain}");
+    }
+
+    #[test]
     fn label_mismatch_is_reported_with_reference_side() {
         let plain = strip_ansi(&render(&diff_with(
             "1 x1 >= 1 ;\n",
@@ -530,6 +635,7 @@ mod tests {
                 mode: CompareMode::Ordered,
                 match_labels: false,
                 label_check: Some(ReferenceSide::B),
+                aux_projection: None,
             },
         )));
         assert!(plain.contains("Label mismatch"));

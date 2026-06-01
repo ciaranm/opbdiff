@@ -4,7 +4,9 @@
 
 use std::path::PathBuf;
 
-use opbdiff::compare::{CompareMode, CompareOptions, ConstraintDiff, compare, compare_ordered};
+use opbdiff::compare::{
+    CompareMode, CompareOptions, ConstraintDiff, compare, compare_ordered, resolve_aux_projection,
+};
 use opbdiff::model::normalise_file;
 use opbdiff::parser::parse;
 
@@ -73,6 +75,7 @@ fn odd_even_sum_pair_is_equivalent_under_unordered() {
             mode: CompareMode::Unordered,
             match_labels: false,
             label_check: None,
+            aux_projection: None,
         },
     );
     assert!(
@@ -100,6 +103,7 @@ fn colour_pair_matches_edges_by_label_under_match_labels() {
             mode: CompareMode::Unordered,
             match_labels: true,
             label_check: None,
+            aux_projection: None,
         },
     );
     assert!(diff.matched_by_label);
@@ -128,6 +132,49 @@ fn colour_pair_matches_edges_by_label_under_match_labels() {
     // The shared variable bounds carry no matching label, so they fall
     // through to unordered canonical matching and match cleanly.
     assert!(diff.summary().matches > 0);
+}
+
+#[test]
+fn colour_pair_collapses_aux_renames_under_ignore_aux_names() {
+    // Only colour.opb carries a preserved: line, so its projected
+    // variables define what counts as auxiliary. Under unordered +
+    // aux-name folding, every constraint that differs only in
+    // auxiliary-variable names (the reified edge and colour
+    // constraints, `f`/`b`/`x` vs each other) matches; what remains is
+    // the genuine structural difference: colour.opb emits the reverse
+    // reification direction (`@c[colours_def][Nge]`) that
+    // colour.verifiedopb does not.
+    let a = load("colour.opb");
+    let b = load("colour.verifiedopb");
+    let projection = resolve_aux_projection(&a, &b).expect("colour.opb has a preserved set");
+    let diff = compare(
+        &a,
+        &b,
+        CompareOptions {
+            mode: CompareMode::Unordered,
+            match_labels: false,
+            label_check: None,
+            aux_projection: Some(projection),
+        },
+    );
+    let s = diff.summary();
+    assert_eq!(s.differing, 0);
+    assert_eq!(s.only_in_b, 0);
+    assert_eq!(
+        s.only_in_a, 7,
+        "the 7 reverse-direction reification constraints"
+    );
+
+    // Every residual only-in-A constraint is a `[…ge]` reification half.
+    for d in &diff.constraints {
+        if let ConstraintDiff::OnlyInA { a, .. } = d {
+            let label = a.label.as_deref().unwrap_or("");
+            assert!(
+                label.ends_with("ge]"),
+                "unexpected residual only-in-A: {label}",
+            );
+        }
+    }
 }
 
 #[test]
@@ -164,6 +211,7 @@ fn unordered_with_label_check_on_odd_even_sum() {
             mode: CompareMode::Unordered,
             match_labels: false,
             label_check: Some(opbdiff::compare::ReferenceSide::B),
+            aux_projection: None,
         },
     );
     // Note: this assertion may need refinement once we look more

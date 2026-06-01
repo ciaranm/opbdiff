@@ -116,6 +116,37 @@ fn match_labels_shows_label_tag_and_content_diff() {
 }
 
 #[test]
+fn ignore_aux_names_equates_renamed_aux_variables() {
+    // Same projected variable x, aux var named differently on each
+    // side. With --ignore-aux-names (and a preserved set on at least
+    // one side) the pair is equivalent.
+    let a = write_tmp("aux_a.opb", "preserved: x ;\n1 x 8 f >= 1 ;\n");
+    let b = write_tmp("aux_b.opb", "preserved: x ;\n1 x 8 g >= 1 ;\n");
+    let mut cmd = Command::cargo_bin("opbdiff").expect("binary built");
+    cmd.arg("--ignore-aux-names")
+        .arg(&a)
+        .arg(&b)
+        .assert()
+        .success()
+        .stdout(contains("aux names ignored"));
+}
+
+#[test]
+fn ignore_aux_names_without_any_preserved_set_exits_two() {
+    // Neither file has a preserved: line, so there is no basis for
+    // deciding what is auxiliary.
+    let a = write_tmp("noaux_a.opb", "1 x 8 f >= 1 ;\n");
+    let b = write_tmp("noaux_b.opb", "1 x 8 g >= 1 ;\n");
+    let mut cmd = Command::cargo_bin("opbdiff").expect("binary built");
+    cmd.arg("--ignore-aux-names")
+        .arg(&a)
+        .arg(&b)
+        .assert()
+        .code(2)
+        .stderr(contains("preserved"));
+}
+
+#[test]
 fn check_labels_with_explicit_reference_flag() {
     let a = write_tmp("labels_a.opb", "1 x1 >= 1 ;\n");
     let b = write_tmp("labels_b.opb", "@card 1 x1 >= 1 ;\n");

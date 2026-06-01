@@ -83,6 +83,43 @@ never equates differently-labelled constraints. Differently- or
 one-sidedly-labelled pairs are surfaced as content/leftover
 differences here, and as explicit mismatches under `--check-labels`.
 
+## Auxiliary-variable folding (`--ignore-aux-names`)
+
+By default two constraints are equal only if their canonical forms are
+identical, variable names included. `--ignore-aux-names` relaxes this
+for *auxiliary* variables: two constraints become equal when they are
+identical after some renaming of their auxiliary variables.
+
+**What counts as auxiliary.** A variable is auxiliary iff it is *not*
+in the projected set, which is taken from the `preserved:` line. We do
+not hard-code any naming convention. The projected set is resolved as:
+
+- exactly one file has a `preserved:` line → use it;
+- both have one → they must be equal, else it is an error;
+- neither has one → it is an error (no basis for the split).
+
+**How the comparison works.** Each constraint is reduced to a match
+key with three parts: the projected terms kept by name (sorted), the
+multiset of auxiliary coefficients (names dropped, sorted), and the
+right-hand side. Two constraints match iff their keys are equal. This
+is exactly "there exists a renaming of the auxiliary variables of one
+constraint that makes it identical to the other", because within a
+single constraint a renaming is free to permute auxiliary variables,
+and only their coefficient multiset is invariant under that.
+
+The match key is the unit all three pairing strategies (ordered,
+unordered, label-matched) compare on, so folding composes with all of
+them, and with `--check-labels`.
+
+**Known limitation — per-constraint, not global.** Folding is decided
+one constraint at a time. It does *not* check that a single consistent
+bijection over auxiliary variables works across the whole file. So two
+files can be reported equivalent under `--ignore-aux-names` even if no
+global renaming reconciles them (e.g. constraint 1 needs `f→g` while
+constraint 2 needs `f→h`). Verifying a global renaming is the harder
+constraint-graph-isomorphism problem and is out of scope; the
+per-constraint check is the cheap, broadly-useful approximation.
+
 ## Label handling (`--check-labels`)
 
 Without `--check-labels`, labels are parsed and preserved on the AST
@@ -124,17 +161,20 @@ shared user variables normalise to the same canonical form on both
 sides, but the AllDifferent constraints do not, because they
 mention aux variables that have no shared identity.
 
-We deliberately do **not** treat differently-named variables as
-equivalent in v1. Adding aux-var renaming (whether by an explicit
-mapping file, by structural inference, or by graph-isomorphism over
-the constraint set) is a future feature that needs its own design.
-Until then, the comparison engine will correctly report these as
-differing, and the human can see from the diff that the difference
-is confined to aux-var names. `--match-labels` makes this much easier
-to read when the two sides share labels: the differing constraints are
-paired up by label and the canonical-form view shows only the renamed
-aux variables (one side `(absent)`, the other carrying the coefficient)
-against a count of identical rows.
+By **default** we do not treat differently-named variables as
+equivalent, so the comparison engine reports these as differing and
+the human can see the difference is confined to aux-var names.
+`--match-labels` makes this easier to read when the two sides share
+labels: the differing constraints are paired up by label and the
+canonical-form view shows only the renamed aux variables.
+
+`--ignore-aux-names` (see above) is the opt-in that folds these away
+entirely, comparing auxiliary terms by coefficient. On the `colour`
+fixtures, `--unordered --ignore-aux-names` collapses all the
+`f`/`b`/`x`-renamed reified constraints to matches and leaves only the
+genuine structural difference. The full graph-isomorphism approach (a
+single globally-consistent renaming, or an explicit mapping file)
+remains a possible future refinement.
 
 ## Verdict and exit code
 

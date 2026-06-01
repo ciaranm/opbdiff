@@ -1,12 +1,16 @@
 //! Comparison engine. Supports two matching modes (ordered by
 //! position, unordered by canonical-form multiset), an optional
 //! label-matching pre-pass (`match_labels`) that pairs constraints by
-//! shared label before falling back to the chosen mode, and optional
+//! shared label before falling back to the chosen mode, optional
+//! auxiliary-variable-name folding (`aux_projection`) that compares
+//! non-projected variables by coefficient only, and optional
 //! directional label checking.
 //!
 //! See `dev_docs/0004-comparison-algorithm.md` for the algorithm.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+
+use thiserror::Error;
 
 use crate::model::{
     CanonicalConstraint, CanonicalFile, CanonicalLabelledConstraint, CanonicalObjectiveItem,
@@ -39,7 +43,7 @@ pub enum ReferenceSide {
 
 /// Comparison options. Public so callers can construct without going
 /// through clap.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct CompareOptions {
     pub mode: CompareMode,
     /// When true, constraints that share a label (present on both
@@ -50,6 +54,102 @@ pub struct CompareOptions {
     pub match_labels: bool,
     /// Some(reference) enables directional label checking.
     pub label_check: Option<ReferenceSide>,
+    /// `Some(projected)` enables auxiliary-variable-name folding: any
+    /// variable *not* in `projected` is treated as auxiliary and
+    /// compared by coefficient only, so two constraints that differ
+    /// solely in the names of their auxiliary variables match. The set
+    /// is the projected (`preserved:`) variables; resolve it with
+    /// [`resolve_aux_projection`]. See
+    /// `dev_docs/0004-comparison-algorithm.md`.
+    pub aux_projection: Option<HashSet<String>>,
+}
+
+/// Error from resolving the projected-variable set that
+/// `--ignore-aux-names` needs.
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum AuxProjectionError {
+    /// Neither file carries a `preserved:` line, so there is no basis
+    /// for deciding which variables are auxiliary.
+    #[error("auxiliary-name folding needs a `preserved:` projection set, but neither file has one")]
+    NoProjection,
+    /// Both files carry a `preserved:` line but they disagree, so the
+    /// auxiliary/projected split is ambiguous.
+    #[error("auxiliary-name folding needs the two `preserved:` sets to agree, but they differ")]
+    ProjectionMismatch,
+}
+
+/// Resolve the set of projected variable names used to decide which
+/// variables are auxiliary, following the rule: if exactly one file has
+/// a `preserved:` line, use it; if both do, they must agree; if neither
+/// does, it is an error.
+pub fn resolve_aux_projection(
+    a: &CanonicalFile,
+    b: &CanonicalFile,
+) -> Result<HashSet<String>, AuxProjectionError> {
+    let pa = a.preserved.as_ref().map(projection_vars);
+    let pb = b.preserved.as_ref().map(projection_vars);
+    match (pa, pb) {
+        (Some(sa), Some(sb)) if sa == sb => Ok(sa),
+        (Some(_), Some(_)) => Err(AuxProjectionError::ProjectionMismatch),
+        (Some(sa), None) | (None, Some(sa)) => Ok(sa),
+        (None, None) => Err(AuxProjectionError::NoProjection),
+    }
+}
+
+fn projection_vars(p: &CanonicalPreservedItem) -> HashSet<String> {
+    p.form
+        .literals
+        .iter()
+        .map(|(var, _negated)| var.clone())
+        .collect()
+}
+
+/// The key two constraints are compared on. Projected (or, when not
+/// folding, all) terms are kept by name in `real`; auxiliary terms are
+/// reduced to a sorted multiset of coefficients in `aux`, dropping
+/// their names. Two keys are equal iff their real terms, auxiliary
+/// coefficient multisets, and right-hand sides all match — i.e. there
+/// is *some* per-constraint renaming of the auxiliary variables making
+/// the constraints identical.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct MatchKey<'a> {
+    real: Vec<(&'a str, i64)>,
+    aux: Vec<i64>,
+    rhs: i64,
+}
+
+fn match_key<'a>(
+    form: &'a CanonicalConstraint,
+    projected: Option<&HashSet<String>>,
+) -> MatchKey<'a> {
+    match projected {
+        // No folding: every term is "real", so the key is just the
+        // canonical form by another name.
+        None => MatchKey {
+            real: form.terms.iter().map(|(v, c)| (v.as_str(), *c)).collect(),
+            aux: Vec::new(),
+            rhs: form.rhs,
+        },
+        Some(p) => {
+            let mut real = Vec::new();
+            let mut aux = Vec::new();
+            // form.terms is already sorted by name, so `real` stays
+            // sorted; `aux` we sort numerically into a multiset.
+            for (v, c) in &form.terms {
+                if p.contains(v) {
+                    real.push((v.as_str(), *c));
+                } else {
+                    aux.push(*c);
+                }
+            }
+            aux.sort_unstable();
+            MatchKey {
+                real,
+                aux,
+                rhs: form.rhs,
+            }
+        }
+    }
 }
 
 /// The full structured diff of two canonical files.
@@ -59,6 +159,10 @@ pub struct DiffResult {
     /// Whether constraints were paired by shared label before the
     /// fallback `mode` matching ran. Reported for context only.
     pub matched_by_label: bool,
+    /// The projected-variable set in force when auxiliary-name folding
+    /// was enabled (`None` when it was not). The reporter uses it to
+    /// fold auxiliary terms in the canonical-form view.
+    pub aux_projection: Option<HashSet<String>>,
     pub objective: ObjectiveDiff,
     pub preserved: PreservedDiff,
     pub constraints: Vec<ConstraintDiff>,
@@ -190,6 +294,7 @@ pub fn compare_ordered(a: &CanonicalFile, b: &CanonicalFile) -> DiffResult {
             mode: CompareMode::Ordered,
             match_labels: false,
             label_check: None,
+            aux_projection: None,
         },
     )
 }
@@ -197,12 +302,34 @@ pub fn compare_ordered(a: &CanonicalFile, b: &CanonicalFile) -> DiffResult {
 /// Compare two canonical files. Always produces a `DiffResult`; the
 /// callsite is responsible for interpreting the verdict.
 pub fn compare(a: &CanonicalFile, b: &CanonicalFile, options: CompareOptions) -> DiffResult {
+    let proj = options.aux_projection.as_ref();
+    let keys_a: Vec<MatchKey> = a
+        .constraints
+        .iter()
+        .map(|c| match_key(&c.form, proj))
+        .collect();
+    let keys_b: Vec<MatchKey> = b
+        .constraints
+        .iter()
+        .map(|c| match_key(&c.form, proj))
+        .collect();
+
     let constraints = if options.match_labels {
-        label_matched_constraints(&a.constraints, &b.constraints, options.mode)
+        label_matched_constraints(
+            &a.constraints,
+            &keys_a,
+            &b.constraints,
+            &keys_b,
+            options.mode,
+        )
     } else {
         match options.mode {
-            CompareMode::Ordered => ordered_constraints(&a.constraints, &b.constraints),
-            CompareMode::Unordered => unordered_constraints(&a.constraints, &b.constraints),
+            CompareMode::Ordered => {
+                ordered_constraints(&a.constraints, &keys_a, &b.constraints, &keys_b)
+            }
+            CompareMode::Unordered => {
+                unordered_constraints(&a.constraints, &keys_a, &b.constraints, &keys_b)
+            }
         }
     };
 
@@ -215,6 +342,7 @@ pub fn compare(a: &CanonicalFile, b: &CanonicalFile, options: CompareOptions) ->
     DiffResult {
         mode: options.mode,
         matched_by_label: options.match_labels,
+        aux_projection: options.aux_projection.clone(),
         objective: compare_objectives(&a.objective, &b.objective),
         preserved: compare_preserved(&a.preserved, &b.preserved),
         constraints,
@@ -223,13 +351,15 @@ pub fn compare(a: &CanonicalFile, b: &CanonicalFile, options: CompareOptions) ->
 
 fn ordered_constraints(
     a: &[CanonicalLabelledConstraint],
+    ka: &[MatchKey<'_>],
     b: &[CanonicalLabelledConstraint],
+    kb: &[MatchKey<'_>],
 ) -> Vec<ConstraintDiff> {
     let max = a.len().max(b.len());
     let mut out = Vec::with_capacity(max);
     for i in 0..max {
         let entry = match (a.get(i), b.get(i)) {
-            (Some(ac), Some(bc)) if ac.form == bc.form => ConstraintDiff::Match {
+            (Some(ac), Some(bc)) if ka[i] == kb[i] => ConstraintDiff::Match {
                 index_a: i,
                 index_b: i,
                 a: ac.clone(),
@@ -258,7 +388,7 @@ fn ordered_constraints(
 
 /// Unordered mode: greedy multiset match.
 ///
-/// Build a map from canonical form to a FIFO of B's available indices.
+/// Build a map from match key to a FIFO of B's available indices.
 /// Walk A; for each constraint, pop a partner from B's queue or emit
 /// OnlyInA. Anything left in B's queues at the end is OnlyInB.
 ///
@@ -267,11 +397,13 @@ fn ordered_constraints(
 /// have different labels, but that case is exotic.
 fn unordered_constraints(
     a: &[CanonicalLabelledConstraint],
+    ka: &[MatchKey<'_>],
     b: &[CanonicalLabelledConstraint],
+    kb: &[MatchKey<'_>],
 ) -> Vec<ConstraintDiff> {
-    let mut b_available: HashMap<&CanonicalConstraint, Vec<usize>> = HashMap::new();
-    for (i, bc) in b.iter().enumerate() {
-        b_available.entry(&bc.form).or_default().push(i);
+    let mut b_available: HashMap<&MatchKey<'_>, Vec<usize>> = HashMap::new();
+    for (i, key) in kb.iter().enumerate() {
+        b_available.entry(key).or_default().push(i);
     }
     // FIFO: pop from front. Vec::remove(0) is O(n) but n is small per
     // canonical form. For very pathological inputs we could switch to
@@ -280,7 +412,7 @@ fn unordered_constraints(
     let mut out = Vec::with_capacity(a.len() + b.len());
 
     for (ai, ac) in a.iter().enumerate() {
-        let bi_opt = b_available.get_mut(&ac.form).and_then(|q| {
+        let bi_opt = b_available.get_mut(&ka[ai]).and_then(|q| {
             if q.is_empty() {
                 None
             } else {
@@ -339,7 +471,9 @@ fn unordered_constraints(
 /// fallback diffs.
 fn label_matched_constraints(
     a: &[CanonicalLabelledConstraint],
+    ka: &[MatchKey<'_>],
     b: &[CanonicalLabelledConstraint],
+    kb: &[MatchKey<'_>],
     mode: CompareMode,
 ) -> Vec<ConstraintDiff> {
     let mut b_by_label: HashMap<&str, Vec<usize>> = HashMap::new();
@@ -364,7 +498,7 @@ fn label_matched_constraints(
             Some(bi) => {
                 b_claimed[bi] = true;
                 let bc = &b[bi];
-                out.push(if ac.form == bc.form {
+                out.push(if ka[ai] == kb[bi] {
                     ConstraintDiff::Match {
                         index_a: ai,
                         index_b: bi,
@@ -387,14 +521,18 @@ fn label_matched_constraints(
     let leftover_b: Vec<usize> = (0..b.len()).filter(|&i| !b_claimed[i]).collect();
 
     // Diff the unpaired remainders with the ordinary mode, working on
-    // owned subsequences, then translate sub-indices back.
+    // owned subsequences, then translate sub-indices back. The match
+    // keys for the subsequences are cloned from the originals (they
+    // borrow the original canonical forms, which outlive this call).
     let a_sub: Vec<CanonicalLabelledConstraint> =
         leftover_a.iter().map(|&i| a[i].clone()).collect();
     let b_sub: Vec<CanonicalLabelledConstraint> =
         leftover_b.iter().map(|&i| b[i].clone()).collect();
+    let ka_sub: Vec<MatchKey<'_>> = leftover_a.iter().map(|&i| ka[i].clone()).collect();
+    let kb_sub: Vec<MatchKey<'_>> = leftover_b.iter().map(|&i| kb[i].clone()).collect();
     let sub = match mode {
-        CompareMode::Ordered => ordered_constraints(&a_sub, &b_sub),
-        CompareMode::Unordered => unordered_constraints(&a_sub, &b_sub),
+        CompareMode::Ordered => ordered_constraints(&a_sub, &ka_sub, &b_sub, &kb_sub),
+        CompareMode::Unordered => unordered_constraints(&a_sub, &ka_sub, &b_sub, &kb_sub),
     };
 
     out.extend(
@@ -584,6 +722,7 @@ mod tests {
                 mode: CompareMode::Unordered,
                 match_labels: false,
                 label_check: None,
+                aux_projection: None,
             },
         )
     }
@@ -643,6 +782,7 @@ mod tests {
                 mode,
                 match_labels: false,
                 label_check: Some(reference),
+                aux_projection: None,
             },
         )
     }
@@ -705,6 +845,7 @@ mod tests {
                 mode,
                 match_labels: true,
                 label_check: None,
+                aux_projection: None,
             },
         )
     }
@@ -795,6 +936,115 @@ mod tests {
             assert_eq!(*index_a, 1);
             assert_eq!(*index_b, 1);
         }
+    }
+
+    // ----- auxiliary-name folding -------------------------------------
+
+    fn fold_aux(
+        a: &CanonicalFile,
+        b: &CanonicalFile,
+        mode: CompareMode,
+        projection: HashSet<String>,
+    ) -> DiffResult {
+        compare(
+            a,
+            b,
+            CompareOptions {
+                mode,
+                match_labels: false,
+                label_check: None,
+                aux_projection: Some(projection),
+            },
+        )
+    }
+
+    fn proj(names: &[&str]) -> HashSet<String> {
+        names.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn aux_folding_matches_single_renamed_aux_var() {
+        // Identical apart from the name of the (non-projected) aux var.
+        let a = canonical("preserved: x ;\n1 x 8 f >= 1 ;\n");
+        let b = canonical("preserved: x ;\n1 x 8 g >= 1 ;\n");
+        // Without folding: they differ (different variable g vs f).
+        assert!(!compare_ordered(&a, &b).is_equivalent());
+        // With folding: f and g are aux (not projected), same coef → match.
+        let diff = fold_aux(&a, &b, CompareMode::Ordered, proj(&["x"]));
+        assert!(diff.is_equivalent(), "summary: {:?}", diff.summary());
+    }
+
+    #[test]
+    fn aux_folding_matches_multiset_of_aux_coefficients() {
+        // An at-least-one over differently-named aux vars.
+        let a = canonical("preserved: x ;\n1 f1 1 f2 1 f3 >= 1 ;\n");
+        let b = canonical("preserved: x ;\n1 g1 1 g2 1 g3 >= 1 ;\n");
+        let diff = fold_aux(&a, &b, CompareMode::Ordered, proj(&["x"]));
+        assert!(diff.is_equivalent(), "summary: {:?}", diff.summary());
+    }
+
+    #[test]
+    fn aux_folding_still_differs_when_aux_coefficients_differ() {
+        // Same aux name-count but different coefficient multiset.
+        let a = canonical("preserved: x ;\n1 x 8 f >= 1 ;\n");
+        let b = canonical("preserved: x ;\n1 x 7 g >= 1 ;\n");
+        let diff = fold_aux(&a, &b, CompareMode::Ordered, proj(&["x"]));
+        assert!(!diff.is_equivalent());
+        assert_eq!(diff.summary().differing, 1);
+    }
+
+    #[test]
+    fn aux_folding_still_differs_when_projected_part_differs() {
+        // The aux vars match by coefficient, but the projected term
+        // differs, so the constraints are genuinely different.
+        let a = canonical("preserved: x y ;\n1 x 8 f >= 1 ;\n");
+        let b = canonical("preserved: x y ;\n1 y 8 g >= 1 ;\n");
+        let diff = fold_aux(&a, &b, CompareMode::Ordered, proj(&["x", "y"]));
+        assert!(!diff.is_equivalent());
+        assert_eq!(diff.summary().differing, 1);
+    }
+
+    #[test]
+    fn aux_folding_does_not_equate_distinct_real_constraints() {
+        // Two different projected constraints must never collapse just
+        // because each has one aux var of the same coefficient.
+        let a = canonical("preserved: x y ;\n1 x 8 f >= 1 ;\n1 y 8 f2 >= 1 ;\n");
+        let b = canonical("preserved: x y ;\n1 y 8 g2 >= 1 ;\n1 x 8 g >= 1 ;\n");
+        // Ordered: positions differ → both Differ. Unordered: should
+        // pair x-with-x and y-with-y by canonical real part.
+        let diff = fold_aux(&a, &b, CompareMode::Unordered, proj(&["x", "y"]));
+        assert!(diff.is_equivalent(), "summary: {:?}", diff.summary());
+    }
+
+    #[test]
+    fn resolve_projection_uses_the_only_preserved_set() {
+        let a = canonical("preserved: x y ;\n1 x >= 0 ;\n");
+        let b = canonical("1 x >= 0 ;\n");
+        assert_eq!(resolve_aux_projection(&a, &b), Ok(proj(&["x", "y"])));
+        assert_eq!(resolve_aux_projection(&b, &a), Ok(proj(&["x", "y"])));
+    }
+
+    #[test]
+    fn resolve_projection_requires_agreement_when_both_present() {
+        let a = canonical("preserved: x y ;\n1 x >= 0 ;\n");
+        let b = canonical("preserved: x y ;\n1 x >= 0 ;\n");
+        assert_eq!(resolve_aux_projection(&a, &b), Ok(proj(&["x", "y"])));
+
+        let c = canonical("preserved: x ;\n1 x >= 0 ;\n");
+        assert_eq!(
+            resolve_aux_projection(&a, &c),
+            Err(AuxProjectionError::ProjectionMismatch)
+        );
+    }
+
+    #[test]
+    fn resolve_projection_errors_when_neither_present() {
+        let a = canonical("1 x >= 0 ;\n");
+        let b = canonical("1 x >= 0 ;\n");
+        assert_eq!(
+            resolve_aux_projection(&a, &b),
+            Err(AuxProjectionError::NoProjection)
+        );
     }
 
     #[test]

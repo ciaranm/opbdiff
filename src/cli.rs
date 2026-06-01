@@ -42,6 +42,14 @@ pub struct Args {
     #[arg(short = 'L', long)]
     pub check_labels: bool,
 
+    /// Treat any variable not in the projected (`preserved:`) set as
+    /// auxiliary and compare it by coefficient only, so constraints
+    /// that differ purely in the *names* of their auxiliary variables
+    /// are considered equal. Requires at least one file to carry a
+    /// `preserved:` line; if both do, they must agree.
+    #[arg(long)]
+    pub ignore_aux_names: bool,
+
     /// Which side carries the reference labels for `--check-labels`.
     /// Default is `b`, matching the verbal "A=candidate, B=reference"
     /// description.
@@ -102,6 +110,9 @@ impl Args {
             } else {
                 None
             },
+            // Resolved later, in the binary, once both files are loaded;
+            // see `main::run`.
+            aux_projection: None,
         }
     }
 }
