@@ -14,7 +14,8 @@ use std::io;
 use anstyle::{AnsiColor, Color, Style};
 
 use crate::compare::{
-    CompareMode, ConstraintDiff, DiffResult, ObjectiveDiff, PreservedDiff, ReferenceSide,
+    CompareMode, ConstraintDiff, DiffResult, LabelPermutation, ObjectiveDiff, PreservedDiff,
+    ReferenceSide,
 };
 use crate::model::CanonicalConstraint;
 
@@ -48,7 +49,15 @@ pub fn write(out: &mut dyn io::Write, diff: &DiffResult) -> io::Result<()> {
         wrote_any_diff = true;
     }
     for d in &diff.constraints {
-        if write_constraint(out, d, diff.mode, diff.aux_projection.as_ref())?.is_some() {
+        if write_constraint(
+            out,
+            d,
+            diff.mode,
+            diff.aux_projection.as_ref(),
+            diff.label_permutation.as_ref(),
+        )?
+        .is_some()
+        {
             wrote_any_diff = true;
         }
     }
@@ -76,6 +85,9 @@ pub fn write(out: &mut dyn io::Write, diff: &DiffResult) -> io::Result<()> {
         }
         if summary.preserved_difference {
             write!(out, ", preserved differs")?;
+        }
+        if let Some(perm) = &diff.label_permutation {
+            write!(out, "{}", describe_permutation(perm, summary.differing))?;
         }
         writeln!(out, ".{HEADING:#}")?;
     } else {
@@ -114,6 +126,42 @@ fn mode_descriptor(diff: &DiffResult) -> String {
         None => {}
     }
     s
+}
+
+/// Summary clause describing how many of the `differing` constraints are
+/// explained by a label permutation, e.g. `, all differing explained by
+/// a label permutation (3 swaps)` or `, 1 of 4 differing explained by a
+/// label permutation (1 longer cycle)`. Empty when nothing lined up.
+fn describe_permutation(perm: &LabelPermutation, differing: usize) -> String {
+    let explained = perm.correspondences.len();
+    if explained == 0 {
+        return String::new();
+    }
+    let swaps = perm.swaps();
+    let longer = perm.cycles.iter().filter(|c| c.len() > 2).count();
+    let mut parts = Vec::new();
+    if swaps > 0 {
+        parts.push(format!("{swaps} swap{}", plural(swaps)));
+    }
+    if longer > 0 {
+        parts.push(format!("{longer} longer cycle{}", plural(longer)));
+    }
+    let detail = if parts.is_empty() {
+        String::new()
+    } else {
+        format!(" ({})", parts.join(", "))
+    };
+    // "all differing" only when every differing constraint — including
+    // any non-label fallback ones — is accounted for by the permutation.
+    if perm.all_explained() && explained == differing {
+        format!(", all differing explained by a label permutation{detail}")
+    } else {
+        format!(", {explained} of {differing} differing explained by a label permutation{detail}")
+    }
+}
+
+fn plural(n: usize) -> &'static str {
+    if n == 1 { "" } else { "s" }
 }
 
 // ---- per-section writers ---------------------------------------------
@@ -167,6 +215,7 @@ fn write_constraint(
     d: &ConstraintDiff,
     mode: CompareMode,
     projection: Option<&HashSet<String>>,
+    permutation: Option<&LabelPermutation>,
 ) -> io::Result<Option<()>> {
     match d {
         ConstraintDiff::Match { .. } => Ok(None),
@@ -188,7 +237,25 @@ fn write_constraint(
             )?;
             writeln!(out, "{A_LINE}  A: {}{A_LINE:#}", a.raw.trim())?;
             writeln!(out, "{B_LINE}  B: {}{B_LINE:#}", b.raw.trim())?;
-            write_canonical_diff(out, &a.form, &b.form, projection)?;
+            // If this difference is just a permuted label, the canonical
+            // forms are wholly unequal but reappear under another label;
+            // the one-line correspondence is far more useful than a
+            // full term-by-term dump, so it replaces the canonical view.
+            match permutation.and_then(|p| p.correspondence_for(a.label.as_deref())) {
+                Some(corr) => {
+                    let kind = if corr.swap {
+                        "label swap"
+                    } else {
+                        "label permutation"
+                    };
+                    writeln!(
+                        out,
+                        "  {HEADING}A's @{} canonically matches B's @{} ({kind}){HEADING:#}",
+                        corr.from, corr.to,
+                    )?;
+                }
+                None => write_canonical_diff(out, &a.form, &b.form, projection)?,
+            }
             Ok(Some(()))
         }
 
@@ -655,6 +722,34 @@ mod tests {
         assert!(plain.contains("expected label: card"));
         assert!(plain.contains("actual label:   (none)"));
         assert!(plain.contains("1 label mismatch"));
+    }
+
+    #[test]
+    fn label_permutation_swap_is_annotated_and_summarised() {
+        // Two constraints with labels swapped between the files. Each
+        // label-pair "differs", but the one-line correspondence replaces
+        // the canonical dump and the summary calls out the permutation.
+        let plain = strip_ansi(&render(&diff_with(
+            "@le 1 x1 >= 1 ;\n@ge 1 x2 >= 1 ;\n",
+            "@le 1 x2 >= 1 ;\n@ge 1 x1 >= 1 ;\n",
+            CompareOptions {
+                mode: CompareMode::Ordered,
+                match_labels: true,
+                label_check: None,
+                aux_projection: None,
+                ignore_missing_preserved: None,
+            },
+        )));
+        assert!(
+            plain.contains("A's @le canonically matches B's @ge (label swap)"),
+            "got: {plain}"
+        );
+        assert!(
+            plain.contains("all differing explained by a label permutation (1 swap)"),
+            "got: {plain}"
+        );
+        // The one-liner replaces the full term-by-term dump.
+        assert!(!plain.contains("canonical-form view"), "got: {plain}");
     }
 
     #[test]

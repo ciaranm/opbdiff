@@ -20,9 +20,10 @@ Two intended uses:
 
 ## Status
 
-`v0.2` — the originally-scoped v1 feature set plus a JSON output mode
-(`--format json`) and `--ignore-no-preserved-in`. APIs and CLI flags
-are pre-1.0 and may change.
+`v0.3` — the originally-scoped v1 feature set plus a JSON output mode
+(`--format json`), `--ignore-no-preserved-in`, and label-permutation
+detection under `--match-labels`. APIs and CLI flags are pre-1.0 and
+may change.
 
 What works:
 
@@ -35,7 +36,9 @@ What works:
 - Ordered (by position) and `--unordered` (multiset) comparison.
 - `--match-labels`: pair constraints by shared label first, then diff
   each pair's contents (with the remainder handled by the fallback
-  mode).
+  mode). When label-paired constraints disagree, it also detects whether
+  they are explained by a *permutation* of labels (A's `@L` is
+  canonically B's `@M`) and reports the correspondence.
 - `--ignore-aux-names`: fold auxiliary-variable names (anything outside
   the projected `preserved:` set) so constraints that differ only in
   the names of their auxiliary variables compare equal.
@@ -177,6 +180,31 @@ $ opbdiff --ignore-no-preserved-in a a.opb b.opb
 Files are semantically equivalent (14 constraints compared, ordered, missing preserved in A ignored).
 ```
 
+Spotting a label permutation. When two encoders hold the *same*
+constraints but assign labels to different ones — a common case is two
+encoders putting `le`/`ge` on opposite halves of a reified `abs` — every
+label-pair shows up as differing. Under `--match-labels`, `opbdiff`
+cross-matches the differing constraints and tells you which label on the
+other side each one actually matches, so a multi-step manual deduction
+collapses to one line per constraint:
+
+```
+$ opbdiff --match-labels a.opb b.opb
+Differing at constraint #1 [@c[_1][posle]] (A line 1, B line 1):
+  A: @c[_1][posle] 1 x1 >= 1 ;
+  B: @c[_1][posle] 1 x2 >= 1 ;
+  A's @c[_1][posle] canonically matches B's @c[_1][posge] (label swap)
+...
+Summary (label-matched, ordered fallback): 0 matches, 2 differing, 0 only in A, 0 only in B, all differing explained by a label permutation (1 swap).
+```
+
+The exit code stays `1`: a permuted label assignment still genuinely
+disagrees, so this is informational, not a pass. General permutations
+(cycles longer than a pairwise swap) are detected too; when only some
+differing labels line up, the summary reports `K of N differing
+explained`. In JSON the same finding appears as the `label_permutation`
+object.
+
 ### JSON output
 
 `--format json` emits a stable, versioned serialisation of the diff
@@ -193,7 +221,7 @@ and in the `report::json` module doc comment.
 $ opbdiff --format json a.opb b.opb
 {
   "schema_version": 1,
-  "tool_version": "0.2.1",
+  "tool_version": "0.3.0",
   "equivalent": false,
   "comparison": { "mode": "ordered", "matched_by_label": false,
                   "aux_names_ignored": false, "projected_variables": null },
@@ -213,9 +241,15 @@ $ opbdiff --format json a.opb b.opb
                                   { "variable": "x2", "coefficient": 2 } ], "rhs": 2 } },
       "term_diff": { "variables": [ { "variable": "x2", "a": 1, "b": 2 } ], "rhs": null }
     }
-  ]
+  ],
+  "label_permutation": null
 }
 ```
+
+Under `--match-labels`, `label_permutation` becomes an object reporting
+which labels are permuted between the files (`correspondences`, `cycles`,
+`swaps`, and `all_differing_explained`); it stays `null` otherwise and
+never affects `equivalent`.
 
 ## Development notes
 

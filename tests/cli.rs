@@ -162,6 +162,40 @@ fn check_labels_with_explicit_reference_flag() {
         .stdout(contains("expected label: card"));
 }
 
+#[test]
+fn match_labels_reports_label_permutation_but_still_differs() {
+    // The two files hold the same constraints with the le/ge labels
+    // swapped. Under --match-labels each pair "differs", but the tool
+    // should explain it as a swap — while still exiting 1, because the
+    // label assignment genuinely disagrees.
+    let a = write_tmp("perm_a.opb", "@le 1 x1 >= 1 ;\n@ge 1 x2 >= 1 ;\n");
+    let b = write_tmp("perm_b.opb", "@le 1 x2 >= 1 ;\n@ge 1 x1 >= 1 ;\n");
+    let mut cmd = Command::cargo_bin("opbdiff").expect("binary built");
+    cmd.arg("--match-labels")
+        .arg(&a)
+        .arg(&b)
+        .assert()
+        .code(1)
+        .stdout(contains("canonically matches B's @ge (label swap)"))
+        .stdout(contains(
+            "all differing explained by a label permutation (1 swap)",
+        ));
+}
+
+#[test]
+fn match_labels_label_permutation_in_json() {
+    let a = write_tmp("permj_a.opb", "@le 1 x1 >= 1 ;\n@ge 1 x2 >= 1 ;\n");
+    let b = write_tmp("permj_b.opb", "@le 1 x2 >= 1 ;\n@ge 1 x1 >= 1 ;\n");
+    let (code, v) = run_json(&["--match-labels"], &a, &b);
+    assert_eq!(code, 1);
+    assert_eq!(v["equivalent"], serde_json::Value::Bool(false));
+    assert_eq!(
+        v["label_permutation"]["all_differing_explained"],
+        serde_json::Value::Bool(true)
+    );
+    assert_eq!(v["label_permutation"]["swaps"], 1);
+}
+
 /// Run with `--format json`, assert the exit code, and parse stdout as
 /// JSON so a malformed payload fails loudly rather than passing a
 /// substring check.

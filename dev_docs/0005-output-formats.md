@@ -79,7 +79,7 @@ Top level: `schema_version`, `tool_version`, `equivalent` (mirrors the
 exit code: `0` ⇔ `true`, `1` ⇔ `false`), `comparison` (mode,
 `matched_by_label`, `aux_names_ignored`, `projected_variables`,
 `ignored_missing_preserved`), `summary` (the flat tally), `objective`,
-`preserved`, and `constraints`.
+`preserved`, `constraints`, and `label_permutation`.
 
 `objective` and `preserved` are tagged records with `kind` ∈
 `{both_absent, match, differ, only_in_a, only_in_b}`. Each side carries
@@ -111,6 +111,20 @@ differs, else `null`). Unlike the plain reporter, the JSON `term_diff`
 does *not* fold auxiliary variables into a multiset row — it reports
 every differing variable by name and leaves interpretation to the
 consumer, which can consult `comparison.projected_variables`.
+
+`label_permutation` is `null` except under `--match-labels` when there
+were label-paired *differing* constraints to analyse. When present it is
+an object with `all_differing_explained` (bool), `swaps` (count of
+length-2 cycles), `correspondences` (`[{a_label, b_label, swap}]`, where
+`A@a_label` ≡ `B@b_label`), `cycles` (the permutation as disjoint label
+cycles), and `unexplained` (differing labels that found no cross-match).
+It answers "do the encodings agree up to label naming?" via
+`all_differing_explained`, but is informational only: a permuted label is
+still a real disagreement, so `equivalent` stays `false`. Like
+`ignored_missing_preserved`, it was added as an additive field within
+schema version 1, so runs that don't use `--match-labels` are
+unaffected. See `dev_docs/0004-comparison-algorithm.md` for how the
+permutation is computed.
 
 ## Stage 4: side-by-side
 

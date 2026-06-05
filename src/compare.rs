@@ -177,9 +177,69 @@ pub struct DiffResult {
     /// match. The `preserved` field still carries the true structural
     /// outcome (an `OnlyInA`/`OnlyInB`); only the verdict is relaxed.
     pub ignored_missing_preserved: Option<ReferenceSide>,
+    /// `Some` under `--match-labels` when there were label-paired
+    /// *differing* constraints to analyse: it records whether those
+    /// differences are explained by a permutation of labels (A's
+    /// constraint labelled `L` being canonically identical to B's
+    /// constraint labelled `M`). `None` otherwise — outside
+    /// `--match-labels`, or when no two equally-labelled constraints
+    /// disagreed. Purely informational: a permuted label is still a
+    /// genuine label disagreement, so this never changes the verdict.
+    pub label_permutation: Option<LabelPermutation>,
     pub objective: ObjectiveDiff,
     pub preserved: PreservedDiff,
     pub constraints: Vec<ConstraintDiff>,
+}
+
+/// Cross-matching of the label-paired differing constraints under
+/// `--match-labels`: when two constraints carrying the *same* label
+/// disagree canonically, do they line up with *other* labels on the
+/// opposite side? `A@from` ≡ `B@to` for each [`LabelCorrespondence`].
+/// When every such difference is explained, the two files hold the same
+/// set of constraints with only the label assignment permuted. See
+/// `dev_docs/0004-comparison-algorithm.md`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LabelPermutation {
+    /// One entry per differing label that found a cross-match, in A
+    /// order: `A@from` is canonically identical to `B@to`.
+    pub correspondences: Vec<LabelCorrespondence>,
+    /// Differing labels with no cross-match on the other side. Empty iff
+    /// every label-paired difference is explained by the permutation.
+    pub unexplained: Vec<String>,
+    /// The permutation decomposed into disjoint cycles over the explained
+    /// labels. Each cycle `[l0, l1, …, l(n-1)]` means `A@li` ≡
+    /// `B@l(i+1 mod n)`; a length-2 cycle is a pairwise swap.
+    pub cycles: Vec<Vec<String>>,
+}
+
+/// A single `A@from` ≡ `B@to` correspondence within a [`LabelPermutation`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LabelCorrespondence {
+    /// The label on A's constraint.
+    pub from: String,
+    /// The label on B's constraint whose canonical form A's matches.
+    pub to: String,
+    /// True iff the reverse also holds (`A@to` ≡ `B@from`): a pure swap.
+    pub swap: bool,
+}
+
+impl LabelPermutation {
+    /// True iff every label-paired differing constraint was explained by
+    /// the permutation (no `unexplained` leftovers).
+    pub fn all_explained(&self) -> bool {
+        self.unexplained.is_empty()
+    }
+
+    /// Number of pure pairwise swaps (length-2 cycles).
+    pub fn swaps(&self) -> usize {
+        self.cycles.iter().filter(|c| c.len() == 2).count()
+    }
+
+    /// The correspondence whose `from` label is `label`, if any.
+    pub fn correspondence_for(&self, label: Option<&str>) -> Option<&LabelCorrespondence> {
+        let label = label?;
+        self.correspondences.iter().find(|c| c.from == label)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -370,15 +430,143 @@ pub fn compare(a: &CanonicalFile, b: &CanonicalFile, options: CompareOptions) ->
         _ => None,
     };
 
+    // Cross-match label-paired differences into a permutation, but only
+    // when label-matching is what produced them; in other modes a
+    // shared label on a differing pair is coincidental, not a pairing
+    // the user asked us to reason about.
+    let label_permutation = if options.match_labels {
+        detect_label_permutation(&constraints, proj)
+    } else {
+        None
+    };
+
     DiffResult {
         mode: options.mode,
         matched_by_label: options.match_labels,
         aux_projection: options.aux_projection.clone(),
         ignored_missing_preserved,
+        label_permutation,
         objective: compare_objectives(&a.objective, &b.objective),
         preserved,
         constraints,
     }
+}
+
+/// Cross-match the label-paired differing constraints to see whether
+/// they are explained by a permutation of labels. Returns `None` when
+/// there were no label-paired differing constraints (nothing to say).
+///
+/// A pair is "label-paired differing" when it is a
+/// [`ConstraintDiff::Differ`] whose two sides carry the *same* label —
+/// exactly what [`label_matched_constraints`] emits when two equally
+/// labelled constraints disagree canonically. For each such A-side
+/// constraint we look, among the same set, for a B-side constraint whose
+/// canonical form (under the active projection) matches it; that B side
+/// necessarily carries a *different* label, giving the `A@L` ≡ `B@M`
+/// correspondence. Duplicate canonical forms are matched greedily in A
+/// order, mirroring [`unordered_constraints`].
+fn detect_label_permutation(
+    constraints: &[ConstraintDiff],
+    projected: Option<&HashSet<String>>,
+) -> Option<LabelPermutation> {
+    // (label, A-side key, B-side key) for each label-paired Differ.
+    let mut entries: Vec<(&str, MatchKey<'_>, MatchKey<'_>)> = Vec::new();
+    for d in constraints {
+        if let ConstraintDiff::Differ { a, b, .. } = d {
+            match (a.label.as_deref(), b.label.as_deref()) {
+                (Some(la), Some(lb)) if la == lb => entries.push((
+                    la,
+                    match_key(&a.form, projected),
+                    match_key(&b.form, projected),
+                )),
+                _ => {}
+            }
+        }
+    }
+    if entries.is_empty() {
+        return None;
+    }
+
+    // FIFO of B-side labels per canonical key, so duplicate forms are
+    // matched greedily and deterministically.
+    let mut b_by_key: HashMap<&MatchKey<'_>, Vec<&str>> = HashMap::new();
+    for (label, _ak, bk) in &entries {
+        b_by_key.entry(bk).or_default().push(label);
+    }
+
+    // Build `from -> to`, recording the A-order of explained labels and
+    // the leftovers that found no partner.
+    let mut map: HashMap<&str, &str> = HashMap::new();
+    let mut order: Vec<&str> = Vec::new();
+    let mut unexplained: Vec<String> = Vec::new();
+    for (label, ak, _bk) in &entries {
+        let to = b_by_key
+            .get_mut(ak)
+            .and_then(|q| (!q.is_empty()).then(|| q.remove(0)));
+        match to {
+            Some(m) => {
+                map.insert(label, m);
+                order.push(label);
+            }
+            None => unexplained.push((*label).to_string()),
+        }
+    }
+
+    let correspondences = order
+        .iter()
+        .map(|&from| {
+            let to = map[from];
+            // A pure swap: the partner maps straight back to us.
+            let swap = map.get(to) == Some(&from);
+            LabelCorrespondence {
+                from: from.to_string(),
+                to: to.to_string(),
+                swap,
+            }
+        })
+        .collect();
+
+    let cycles = decompose_cycles(&map, &order);
+
+    Some(LabelPermutation {
+        correspondences,
+        unexplained,
+        cycles,
+    })
+}
+
+/// Decompose a `from -> to` map into disjoint cycles, starting from each
+/// label in `order` (A order) not yet visited. Only chains that close
+/// back on their start are emitted; one that runs into an unmapped label
+/// (possible when some labels were left unexplained) is not a cycle.
+fn decompose_cycles<'a>(map: &HashMap<&'a str, &'a str>, order: &[&'a str]) -> Vec<Vec<String>> {
+    let mut visited: HashSet<&str> = HashSet::new();
+    let mut cycles: Vec<Vec<String>> = Vec::new();
+    for &start in order {
+        if visited.contains(start) {
+            continue;
+        }
+        let mut chain: Vec<&str> = Vec::new();
+        let mut cur = start;
+        loop {
+            if visited.contains(cur) {
+                break;
+            }
+            let Some(&next) = map.get(cur) else {
+                break;
+            };
+            visited.insert(cur);
+            chain.push(cur);
+            cur = next;
+            if cur == start {
+                if chain.len() >= 2 {
+                    cycles.push(chain.iter().map(|s| s.to_string()).collect());
+                }
+                break;
+            }
+        }
+    }
+    cycles
 }
 
 fn ordered_constraints(
@@ -1166,5 +1354,105 @@ mod tests {
         assert!(diff.summary().preserved_difference);
         assert_eq!(diff.ignored_missing_preserved, None);
         assert!(matches!(diff.preserved, PreservedDiff::Differ { .. }));
+    }
+
+    // ----- label-permutation detection ---------------------------------
+
+    #[test]
+    fn label_permutation_detects_a_pairwise_swap() {
+        // Same two constraints, labels assigned to the opposite one. Each
+        // label pairs up and disagrees, but A@le ≡ B@ge and A@ge ≡ B@le.
+        let a = canonical("@le 1 x1 >= 1 ;\n@ge 1 x2 >= 1 ;\n");
+        let b = canonical("@le 1 x2 >= 1 ;\n@ge 1 x1 >= 1 ;\n");
+        let diff = match_labels(&a, &b, CompareMode::Ordered);
+        // Still differs: a permuted label is a genuine disagreement.
+        assert!(!diff.is_equivalent());
+        assert_eq!(diff.summary().differing, 2);
+
+        let perm = diff.label_permutation.expect("a permutation was detected");
+        assert!(perm.all_explained());
+        assert_eq!(perm.swaps(), 1);
+        assert_eq!(perm.cycles, vec![vec!["le".to_string(), "ge".to_string()]]);
+        let le = perm.correspondence_for(Some("le")).unwrap();
+        assert_eq!(le.to, "ge");
+        assert!(le.swap);
+        let ge = perm.correspondence_for(Some("ge")).unwrap();
+        assert_eq!(ge.to, "le");
+        assert!(ge.swap);
+    }
+
+    #[test]
+    fn label_permutation_detects_a_three_cycle() {
+        // A@a ≡ B@c, A@b ≡ B@a, A@c ≡ B@b: a single 3-cycle, not swaps.
+        let a = canonical("@a 1 x1 >= 1 ;\n@b 1 x2 >= 1 ;\n@c 1 x3 >= 1 ;\n");
+        let b = canonical("@a 1 x2 >= 1 ;\n@b 1 x3 >= 1 ;\n@c 1 x1 >= 1 ;\n");
+        let diff = match_labels(&a, &b, CompareMode::Ordered);
+        let perm = diff.label_permutation.expect("a permutation was detected");
+        assert!(perm.all_explained());
+        assert_eq!(perm.swaps(), 0);
+        assert_eq!(perm.cycles.len(), 1);
+        assert_eq!(perm.cycles[0].len(), 3);
+        // A@a matches B@c (the x1 constraint lives under @c on side B).
+        assert_eq!(perm.correspondence_for(Some("a")).unwrap().to, "c");
+        assert!(!perm.correspondence_for(Some("a")).unwrap().swap);
+    }
+
+    #[test]
+    fn label_permutation_records_unexplained_when_only_some_line_up() {
+        // @a and @b both differ, but only @b's content reappears under a
+        // different label on B; @a's content (x1) appears nowhere on B.
+        let a = canonical("@a 1 x1 >= 1 ;\n@b 1 x2 >= 1 ;\n");
+        let b = canonical("@a 1 x2 >= 1 ;\n@b 1 x9 >= 1 ;\n");
+        let diff = match_labels(&a, &b, CompareMode::Ordered);
+        let perm = diff.label_permutation.expect("a permutation was detected");
+        assert!(!perm.all_explained());
+        assert_eq!(perm.unexplained, vec!["a".to_string()]);
+        // @b's x2 matches B's @a.
+        assert_eq!(perm.correspondence_for(Some("b")).unwrap().to, "a");
+        // No closed cycle: the chain runs into the unexplained label.
+        assert!(perm.cycles.is_empty());
+    }
+
+    #[test]
+    fn label_permutation_is_none_without_match_labels() {
+        // The same swap, but ordered mode pairs by position, so the
+        // detection (which is `--match-labels`-only) does not run.
+        let a = canonical("@le 1 x1 >= 1 ;\n@ge 1 x2 >= 1 ;\n");
+        let b = canonical("@le 1 x2 >= 1 ;\n@ge 1 x1 >= 1 ;\n");
+        let diff = compare_ordered(&a, &b);
+        assert!(diff.label_permutation.is_none());
+    }
+
+    #[test]
+    fn label_permutation_is_none_when_no_label_pair_differs() {
+        // Labels match and content agrees per label: nothing differs, so
+        // there is nothing to cross-match.
+        let a = canonical("@p 1 x1 >= 1 ;\n@q 1 x2 >= 1 ;\n");
+        let b = canonical("@q 1 x2 >= 1 ;\n@p 1 x1 >= 1 ;\n");
+        let diff = match_labels(&a, &b, CompareMode::Ordered);
+        assert!(diff.is_equivalent());
+        assert!(diff.label_permutation.is_none());
+    }
+
+    #[test]
+    fn label_permutation_respects_aux_folding() {
+        // Under --ignore-aux-names the swap is between constraints that
+        // differ only in aux *names*: A@le folds to B@ge and vice versa,
+        // which is only visible once aux names are folded away.
+        let a = canonical("preserved: x ;\n@le 1 x 8 f >= 1 ;\n@ge 1 x 9 h >= 1 ;\n");
+        let b = canonical("preserved: x ;\n@le 1 x 9 g >= 1 ;\n@ge 1 x 8 k >= 1 ;\n");
+        let diff = compare(
+            &a,
+            &b,
+            CompareOptions {
+                mode: CompareMode::Ordered,
+                match_labels: true,
+                aux_projection: Some(proj(&["x"])),
+                ..Default::default()
+            },
+        );
+        let perm = diff.label_permutation.expect("a permutation was detected");
+        assert!(perm.all_explained());
+        assert_eq!(perm.swaps(), 1);
     }
 }

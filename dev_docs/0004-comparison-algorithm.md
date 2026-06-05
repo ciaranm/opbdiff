@@ -83,6 +83,54 @@ never equates differently-labelled constraints. Differently- or
 one-sidedly-labelled pairs are surfaced as content/leftover
 differences here, and as explicit mismatches under `--check-labels`.
 
+## Detecting label permutations under `--match-labels`
+
+A common cross-encoder situation is that the two files hold the **same
+set of constraints** but assign labels to **different** ones — labels
+permuted, encodings identical. Under `--match-labels` that surfaces as a
+run of `Differ` entries (each label paired with itself, content
+disagreeing), and the reader is left to cross-reference the canonical
+dumps to realise "A's `@posle` is just B's `@posge`". `opbdiff` does that
+cross-referencing automatically.
+
+After the constraint diff is built, a post-pass (`detect_label_permutation`)
+runs whenever `--match-labels` is in force:
+
+1. **Collect.** Take every `Differ` whose two sides carry the *same*
+   label — exactly the label-pass output. (Fallback-pass differences pair
+   constraints whose labels did *not* match across sides, so they never
+   have equal labels and are excluded.) Each contributes its label `L`
+   and the two sides' match keys.
+2. **Cross-match.** Build a multimap from B-side match key to the labels
+   carrying it, then for each A-side constraint look up its own key: the
+   B-side label found is some `M ≠ L` (≠ because the pair is a `Differ`,
+   so its own two keys disagree). That yields the correspondence
+   `A@L ≡ B@M`. Duplicate canonical forms are matched greedily in A order,
+   mirroring the unordered matcher.
+3. **Decompose.** The correspondences form a map `L → M` over the set of
+   differing labels (the same label set appears on both sides because the
+   pairs were label-paired). When every label finds a partner the map is
+   a bijection, which is decomposed into disjoint cycles: a length-2
+   cycle is a pairwise *swap*, longer cycles are general permutations.
+   Labels with no cross-match are recorded as *unexplained*.
+
+The whole thing reuses the same match key as the pairing engine, so it
+**respects `--ignore-aux-names`**: under folding, two constraints that
+differ only in auxiliary-variable names count as the same canonical form
+for cross-matching, so a swap hidden behind aux renaming is still found.
+
+**This is informational and never changes the verdict.** A permuted
+label assignment is still a genuine disagreement about which constraint
+carries which label, so the files are *not* equivalent and the exit code
+stays `1`. The plain reporter replaces the per-term canonical dump of an
+explained `Differ` with the one-line correspondence and appends a clause
+to the summary (`all differing explained by a label permutation (N
+swaps)`, or `K of N differing explained …` when only some line up); the
+JSON reporter emits a `label_permutation` object (`correspondences`,
+`cycles`, `swaps`, `all_differing_explained`, `unexplained`). This keeps
+with the project's "surface differences, don't silently equate them"
+stance: we *explain* the permutation, we don't forgive it.
+
 ## Auxiliary-variable folding (`--ignore-aux-names`)
 
 By default two constraints are equal only if their canonical forms are

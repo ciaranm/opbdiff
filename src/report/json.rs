@@ -29,7 +29,7 @@
 //! ```json
 //! {
 //!   "schema_version": 1,
-//!   "tool_version": "0.2.1",
+//!   "tool_version": "0.3.0",
 //!   "equivalent": false,
 //!   "comparison": {
 //!     "mode": "ordered",            // or "unordered"
@@ -57,9 +57,36 @@
 //!         "rhs": null                           // { "a": N, "b": M } when the RHS differs
 //!       }
 //!     }
-//!   ]
+//!   ],
+//!   "label_permutation": null    // object under --match-labels when labels are permuted
 //! }
 //! ```
+//!
+//! Under `--match-labels`, when constraints paired by equal label
+//! disagree, `label_permutation` reports whether those differences are
+//! explained by a *permutation* of labels — A's constraint labelled `L`
+//! being canonically identical to B's constraint labelled `M`:
+//!
+//! ```json
+//! "label_permutation": {
+//!   "all_differing_explained": true,
+//!   "swaps": 2,
+//!   "correspondences": [
+//!     { "a_label": "c[_1][posle]", "b_label": "c[_1][posge]", "swap": true },
+//!     { "a_label": "c[_1][posge]", "b_label": "c[_1][posle]", "swap": true }
+//!   ],
+//!   "cycles": [ ["c[_1][posle]", "c[_1][posge]"] ],
+//!   "unexplained": []
+//! }
+//! ```
+//!
+//! It is `null` outside `--match-labels` and when no two equally-labelled
+//! constraints disagreed. It is *informational only*: a permuted label is
+//! still a genuine label disagreement, so `equivalent` stays `false`. A
+//! consumer asking "do the encodings agree up to label naming?" reads
+//! `label_permutation.all_differing_explained`. Added as an additive
+//! field within schema version 1, so runs that don't use `--match-labels`
+//! are unaffected.
 //!
 //! Only *differences* appear in `constraints` — matched constraints are
 //! omitted, exactly as the plain reporter omits them, so an equivalent
@@ -89,7 +116,8 @@ use std::io;
 use serde::Serialize;
 
 use crate::compare::{
-    CompareMode, ConstraintDiff, DiffResult, ObjectiveDiff, PreservedDiff, ReferenceSide,
+    CompareMode, ConstraintDiff, DiffResult, LabelPermutation, ObjectiveDiff, PreservedDiff,
+    ReferenceSide,
 };
 use crate::model::{
     CanonicalConstraint, CanonicalLabelledConstraint, CanonicalObjectiveItem,
@@ -127,6 +155,10 @@ struct Report<'a> {
     objective: ObjectiveJson<'a>,
     preserved: PreservedJson<'a>,
     constraints: Vec<ConstraintJson<'a>>,
+    /// Present (non-`null`) only under `--match-labels` when there were
+    /// label-paired *differing* constraints to analyse; see
+    /// [`LabelPermutationJson`]. Always `null` otherwise.
+    label_permutation: Option<LabelPermutationJson<'a>>,
 }
 
 impl<'a> Report<'a> {
@@ -145,6 +177,10 @@ impl<'a> Report<'a> {
             objective: ObjectiveJson::from_diff(&diff.objective),
             preserved: PreservedJson::from_diff(&diff.preserved),
             constraints,
+            label_permutation: diff
+                .label_permutation
+                .as_ref()
+                .map(LabelPermutationJson::from_perm),
         }
     }
 }
@@ -571,6 +607,64 @@ impl<'a> TermDiffJson<'a> {
 // differing variable by name (aux included), leaving the consumer to
 // interpret them against `comparison.projected_variables`.
 
+// ---- label permutation -----------------------------------------------
+
+/// Cross-matching of label-paired differing constraints into a label
+/// permutation. `A@a_label` ≡ `B@b_label` for each correspondence; when
+/// `all_differing_explained` is `true` the two files hold the same set
+/// of constraints with only the labels permuted. This is informational
+/// and never affects `equivalent` — a permuted label is still a genuine
+/// disagreement of label assignment.
+#[derive(Serialize)]
+struct LabelPermutationJson<'a> {
+    /// True iff every label-paired differing constraint was cross-matched
+    /// (`unexplained` is empty).
+    all_differing_explained: bool,
+    /// Count of pure pairwise swaps (length-2 cycles).
+    swaps: usize,
+    /// `A@a_label` ≡ `B@b_label`, one per explained differing label, in
+    /// A order.
+    correspondences: Vec<LabelCorrespondenceJson<'a>>,
+    /// The permutation as disjoint cycles of labels: `[l0, l1, …]` means
+    /// `A@li` ≡ `B@l(i+1 mod n)`.
+    cycles: Vec<Vec<&'a str>>,
+    /// Differing labels that found no cross-match; empty iff
+    /// `all_differing_explained`.
+    unexplained: Vec<&'a str>,
+}
+
+#[derive(Serialize)]
+struct LabelCorrespondenceJson<'a> {
+    a_label: &'a str,
+    b_label: &'a str,
+    /// True iff the reverse also holds (`A@b_label` ≡ `B@a_label`).
+    swap: bool,
+}
+
+impl<'a> LabelPermutationJson<'a> {
+    fn from_perm(p: &'a LabelPermutation) -> Self {
+        LabelPermutationJson {
+            all_differing_explained: p.all_explained(),
+            swaps: p.swaps(),
+            correspondences: p
+                .correspondences
+                .iter()
+                .map(|c| LabelCorrespondenceJson {
+                    a_label: &c.from,
+                    b_label: &c.to,
+                    swap: c.swap,
+                })
+                .collect(),
+            cycles: p
+                .cycles
+                .iter()
+                .map(|c| c.iter().map(String::as_str).collect())
+                .collect(),
+            unexplained: p.unexplained.iter().map(String::as_str).collect(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -724,6 +818,38 @@ mod tests {
         assert_eq!(v["preserved"]["a"]["literals"][0]["variable"], "x1");
         assert_eq!(v["summary"]["objective_difference"], Value::Bool(true));
         assert_eq!(v["summary"]["preserved_difference"], Value::Bool(true));
+    }
+
+    #[test]
+    fn label_permutation_swap_is_reported_without_changing_the_verdict() {
+        let v = render(&diff_with(
+            "@le 1 x1 >= 1 ;\n@ge 1 x2 >= 1 ;\n",
+            "@le 1 x2 >= 1 ;\n@ge 1 x1 >= 1 ;\n",
+            CompareOptions {
+                mode: CompareMode::Ordered,
+                match_labels: true,
+                label_check: None,
+                aux_projection: None,
+                ignore_missing_preserved: None,
+            },
+        ));
+        // A permuted label is still a genuine disagreement.
+        assert_eq!(v["equivalent"], Value::Bool(false));
+        let p = &v["label_permutation"];
+        assert_eq!(p["all_differing_explained"], Value::Bool(true));
+        assert_eq!(p["swaps"], 1);
+        assert_eq!(p["cycles"].as_array().unwrap().len(), 1);
+        assert_eq!(p["unexplained"].as_array().unwrap().len(), 0);
+        let corr = p["correspondences"].as_array().unwrap();
+        let le = corr.iter().find(|c| c["a_label"] == "le").unwrap();
+        assert_eq!(le["b_label"], "ge");
+        assert_eq!(le["swap"], Value::Bool(true));
+    }
+
+    #[test]
+    fn label_permutation_is_null_without_match_labels() {
+        let v = render(&diff("1 x1 >= 1 ;\n", "1 x2 >= 1 ;\n"));
+        assert_eq!(v["label_permutation"], Value::Null);
     }
 
     #[test]
