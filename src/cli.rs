@@ -56,12 +56,27 @@ pub struct Args {
     #[arg(short, long, value_enum, default_value_t = ReferenceArg::B)]
     pub reference: ReferenceArg,
 
+    /// Output format. `plain` is the human-readable text report;
+    /// `json` is a stable, machine-readable serialisation for scripts,
+    /// tests, and tooling (see `dev_docs/0005-output-formats.md`).
+    /// Colour applies to `plain` only; JSON is never coloured.
+    #[arg(short, long, value_enum, default_value_t = OutputFormat::Plain, value_name = "FORMAT")]
+    pub format: OutputFormat,
+
     /// When to emit ANSI colour. `auto` keeps colour for TTY stdout
     /// and strips it otherwise; the `NO_COLOR` environment variable
     /// also forces stripping. `always` keeps colour even when piped;
     /// `never` strips unconditionally.
     #[arg(long, value_enum, default_value_t = ColorChoiceArg::Auto, value_name = "WHEN")]
     pub color: ColorChoiceArg,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
+pub enum OutputFormat {
+    /// Human-readable text, optionally ANSI-coloured.
+    Plain,
+    /// Machine-readable JSON with a stable schema.
+    Json,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]

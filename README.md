@@ -20,8 +20,8 @@ Two intended uses:
 
 ## Status
 
-`v0.1` — the originally-scoped v1 feature set is implemented. APIs and
-CLI flags are pre-1.0 and may change.
+`v0.2` — the originally-scoped v1 feature set plus a JSON output mode
+(`--format json`). APIs and CLI flags are pre-1.0 and may change.
 
 What works:
 
@@ -40,6 +40,8 @@ What works:
   the names of their auxiliary variables compare equal.
 - Directional `--check-labels` with `--reference A|B`.
 - Plain-text reporter with a per-position breakdown and a summary line.
+- JSON reporter (`--format json`) with a stable, versioned schema for
+  scripts, tests, and feeding the diff to other tooling.
 - 0 / 1 / 2 exit codes for use in scripts and tests.
 
 Documented v1 limitations:
@@ -53,8 +55,8 @@ Documented v1 limitations:
   `--ignore-aux-names`, which compares auxiliary terms by coefficient
   only. Note this is a per-constraint check: it does not verify a
   single globally-consistent renaming of the auxiliary variables.
-- Plain-text and colour-aware reporters ship; JSON and side-by-side
-  are sketched in
+- Plain-text, colour-aware, and JSON reporters ship; side-by-side is
+  still sketched in
   [`dev_docs/0005-output-formats.md`](dev_docs/0005-output-formats.md).
 
 ## Build
@@ -82,7 +84,8 @@ Options:
 | `--ignore-aux-names`          | Treat any variable not in the projected (`preserved:`) set as auxiliary and compare it by coefficient only, so differences in auxiliary-variable *names* don't count. Needs a `preserved:` line on at least one file (both must agree). |
 | `-L`, `--check-labels`        | Enforce reference-side labels on the candidate.                 |
 | `-r`, `--reference <A\|B>`    | Which side is the label reference (default `B`).                |
-| `--color <auto\|always\|never>` | When to emit ANSI colour. `auto` honours TTY and `NO_COLOR`.   |
+| `-f`, `--format <plain\|json>` | Output format. `plain` (default) is human-readable text; `json` is the machine-readable schema below. |
+| `--color <auto\|always\|never>` | When to emit ANSI colour (applies to `plain` only). `auto` honours TTY and `NO_COLOR`. |
 
 Exit codes:
 
@@ -158,6 +161,46 @@ Label mismatch at constraint A#1 / B#1 (reference=B):
   actual label:   (none)
   ...
 Summary (unordered): 4 matches, 0 differing, 0 only in A, 0 only in B, 10 label mismatches.
+```
+
+### JSON output
+
+`--format json` emits a stable, versioned serialisation of the diff
+for scripts, tests, and other tooling. The top-level `equivalent`
+boolean mirrors the exit code (`true` ⇔ exit `0`), so a "are these two
+files effectively the same?" check needs nothing more than that field.
+Only *differences* appear in `constraints` (matched constraints are
+omitted, just as in the text report), so an equivalent pair is a tiny
+payload; `summary.matches` carries the matched count. The full schema
+lives in [`dev_docs/0005-output-formats.md`](dev_docs/0005-output-formats.md)
+and in the `report::json` module doc comment.
+
+```
+$ opbdiff --format json a.opb b.opb
+{
+  "schema_version": 1,
+  "tool_version": "0.2.0",
+  "equivalent": false,
+  "comparison": { "mode": "ordered", "matched_by_label": false,
+                  "aux_names_ignored": false, "projected_variables": null },
+  "summary": { "matches": 1, "differing": 1, "only_in_a": 0, "only_in_b": 0,
+               "label_mismatches": 0, "objective_difference": false,
+               "preserved_difference": false },
+  "objective": { "kind": "both_absent" },
+  "preserved": { "kind": "both_absent" },
+  "constraints": [
+    {
+      "kind": "differ", "index_a": 1, "index_b": 1,
+      "a": { "label": null, "line": 2, "raw": "1 x1 1 x2 >= 2 ;",
+             "form": { "terms": [ { "variable": "x1", "coefficient": 1 },
+                                  { "variable": "x2", "coefficient": 1 } ], "rhs": 2 } },
+      "b": { "label": null, "line": 2, "raw": "1 x1 2 x2 >= 2 ;",
+             "form": { "terms": [ { "variable": "x1", "coefficient": 1 },
+                                  { "variable": "x2", "coefficient": 2 } ], "rhs": 2 } },
+      "term_diff": { "variables": [ { "variable": "x2", "a": 1, "b": 2 } ], "rhs": null }
+    }
+  ]
+}
 ```
 
 ## Development notes

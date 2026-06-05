@@ -5,6 +5,7 @@
 use std::path::{Path, PathBuf};
 
 use assert_cmd::Command;
+use predicates::prelude::PredicateBooleanExt;
 use predicates::str::contains;
 
 fn data(name: &str) -> PathBuf {
@@ -159,4 +160,70 @@ fn check_labels_with_explicit_reference_flag() {
         .code(1)
         .stdout(contains("Label mismatch"))
         .stdout(contains("expected label: card"));
+}
+
+/// Run with `--format json`, assert the exit code, and parse stdout as
+/// JSON so a malformed payload fails loudly rather than passing a
+/// substring check.
+fn run_json(args: &[&str], a: &Path, b: &Path) -> (i32, serde_json::Value) {
+    let mut cmd = Command::cargo_bin("opbdiff").expect("binary built");
+    cmd.arg("--format").arg("json");
+    for arg in args {
+        cmd.arg(arg);
+    }
+    let output = cmd.arg(a).arg(b).output().expect("run opbdiff");
+    let code = output.status.code().expect("process exited normally");
+    let value = serde_json::from_slice(&output.stdout)
+        .unwrap_or_else(|e| panic!("stdout was not valid JSON ({e}): {:?}", output.stdout));
+    (code, value)
+}
+
+#[test]
+fn json_equivalent_pair_is_marked_equivalent_and_exits_zero() {
+    let a = write_tmp("json_eq_a.opb", "1 x1 1 x2 >= 1 ;\n");
+    let b = write_tmp("json_eq_b.opb", "+1 ~x2 +1 ~x1 <= 1 ;\n");
+    let (code, v) = run_json(&[], &a, &b);
+    assert_eq!(code, 0);
+    assert_eq!(v["equivalent"], serde_json::Value::Bool(true));
+    assert_eq!(v["schema_version"], 1);
+    assert_eq!(v["constraints"].as_array().unwrap().len(), 0);
+}
+
+#[test]
+fn json_differing_pair_reports_the_difference_and_exits_one() {
+    let a = write_tmp("json_diff_a.opb", "1 x1 >= 1 ;\n");
+    let b = write_tmp("json_diff_b.opb", "1 x2 >= 1 ;\n");
+    let (code, v) = run_json(&[], &a, &b);
+    assert_eq!(code, 1);
+    assert_eq!(v["equivalent"], serde_json::Value::Bool(false));
+    assert_eq!(v["constraints"][0]["kind"], "differ");
+    assert_eq!(v["summary"]["differing"], 1);
+}
+
+#[test]
+fn json_output_is_never_coloured_even_with_color_always() {
+    // JSON bypasses the colour stream, so even `--color=always` must
+    // not inject ANSI escapes that would corrupt the payload.
+    let a = write_tmp("json_col_a.opb", "1 x1 >= 1 ;\n");
+    let b = write_tmp("json_col_b.opb", "1 x2 >= 1 ;\n");
+    let mut cmd = Command::cargo_bin("opbdiff").expect("binary built");
+    cmd.arg("--format=json")
+        .arg("--color=always")
+        .arg(&a)
+        .arg(&b)
+        .assert()
+        .code(1)
+        .stdout(predicates::str::contains("\x1b[").not());
+}
+
+#[test]
+fn json_fixture_pair_serialises_under_unordered() {
+    let (code, v) = run_json(
+        &["--unordered"],
+        &data("odd_even_sum.opb"),
+        &data("odd_even_sum.verifiedopb"),
+    );
+    assert_eq!(code, 0);
+    assert_eq!(v["equivalent"], serde_json::Value::Bool(true));
+    assert_eq!(v["comparison"]["mode"], "unordered");
 }

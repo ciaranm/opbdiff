@@ -13,10 +13,11 @@ use std::process::ExitCode;
 use anyhow::{Context, Result};
 use clap::Parser as _;
 
+use cli::OutputFormat;
 use opbdiff::compare::{compare, resolve_aux_projection};
 use opbdiff::model::{CanonicalFile, normalise_file};
 use opbdiff::parser::parse;
-use opbdiff::report::plain;
+use opbdiff::report::{json, plain};
 
 fn main() -> ExitCode {
     let args = cli::Args::parse();
@@ -46,8 +47,18 @@ fn run(args: &cli::Args) -> Result<bool> {
 
     let stdout = std::io::stdout();
     let handle = stdout.lock();
-    let mut coloured = anstream::AutoStream::new(handle, args.color.into());
-    plain::write(&mut coloured, &diff).context("writing report")?;
+    match args.format {
+        OutputFormat::Plain => {
+            let mut coloured = anstream::AutoStream::new(handle, args.color.into());
+            plain::write(&mut coloured, &diff).context("writing report")?;
+        }
+        // JSON is never coloured, so it bypasses the colour stream and
+        // writes straight to stdout.
+        OutputFormat::Json => {
+            let mut handle = handle;
+            json::write(&mut handle, &diff).context("writing JSON report")?;
+        }
+    }
 
     Ok(diff.is_equivalent())
 }
