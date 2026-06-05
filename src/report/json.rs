@@ -29,13 +29,14 @@
 //! ```json
 //! {
 //!   "schema_version": 1,
-//!   "tool_version": "0.2.0",
+//!   "tool_version": "0.2.1",
 //!   "equivalent": false,
 //!   "comparison": {
 //!     "mode": "ordered",            // or "unordered"
 //!     "matched_by_label": false,
 //!     "aux_names_ignored": false,
-//!     "projected_variables": null   // sorted [String] when folding, else null
+//!     "projected_variables": null,  // sorted [String] when folding, else null
+//!     "ignored_missing_preserved": null  // "a"/"b" when that file's missing preserved: line was ignored
 //!   },
 //!   "summary": {
 //!     "matches": 3, "differing": 1, "only_in_a": 0, "only_in_b": 0,
@@ -74,6 +75,14 @@
 //! readability), the JSON view lists every differing variable by name,
 //! aux included, and leaves interpretation to the consumer via
 //! `comparison.projected_variables`.
+//!
+//! When `comparison.ignored_missing_preserved` is set (via
+//! `--ignore-no-preserved-in`), `preserved` still reports the true
+//! structural outcome — e.g. `{"kind": "only_in_b", ...}` — so the data
+//! is never hidden, but `summary.preserved_difference` is `false` and
+//! `equivalent` ignores the absence. A consumer that wants the headline
+//! verdict reads `equivalent`; one auditing the raw finding reads
+//! `preserved`.
 
 use std::io;
 
@@ -148,6 +157,12 @@ struct Comparison<'a> {
     /// The projected (`preserved:`) variable set in force when auxiliary
     /// names were folded, sorted for determinism; `null` otherwise.
     projected_variables: Option<Vec<&'a str>>,
+    /// `"a"` or `"b"` when a one-sided missing `preserved:` line on that
+    /// file was ignored (`--ignore-no-preserved-in`); `null` otherwise.
+    /// When set, `preserved` still reports the true `only_in_*` outcome,
+    /// but `summary.preserved_difference` is `false` and `equivalent`
+    /// disregards the absence.
+    ignored_missing_preserved: Option<&'static str>,
 }
 
 impl<'a> Comparison<'a> {
@@ -162,6 +177,10 @@ impl<'a> Comparison<'a> {
             matched_by_label: diff.matched_by_label,
             aux_names_ignored: diff.aux_projection.is_some(),
             projected_variables,
+            ignored_missing_preserved: diff.ignored_missing_preserved.map(|side| match side {
+                ReferenceSide::A => "a",
+                ReferenceSide::B => "b",
+            }),
         }
     }
 }
@@ -663,6 +682,7 @@ mod tests {
                 match_labels: false,
                 label_check: None,
                 aux_projection: Some(projection),
+                ignore_missing_preserved: None,
             },
         ));
         assert_eq!(v["comparison"]["mode"], "unordered");
@@ -680,6 +700,7 @@ mod tests {
                 match_labels: false,
                 label_check: Some(ReferenceSide::B),
                 aux_projection: None,
+                ignore_missing_preserved: None,
             },
         ));
         assert_eq!(v["equivalent"], Value::Bool(false));
@@ -703,5 +724,27 @@ mod tests {
         assert_eq!(v["preserved"]["a"]["literals"][0]["variable"], "x1");
         assert_eq!(v["summary"]["objective_difference"], Value::Bool(true));
         assert_eq!(v["summary"]["preserved_difference"], Value::Bool(true));
+    }
+
+    #[test]
+    fn ignored_missing_preserved_is_recorded_honestly() {
+        // A lacks preserved:, B has it, constraints agree, ignore set to
+        // A. The headline is equivalent and the summary flag is cleared,
+        // but `preserved` still reports the true only_in_b finding and
+        // `comparison.ignored_missing_preserved` explains the relaxation.
+        let v = render(&diff_with(
+            "1 x1 >= 1 ;\n",
+            "preserved: x1 ;\n1 x1 >= 1 ;\n",
+            CompareOptions {
+                ignore_missing_preserved: Some(ReferenceSide::A),
+                ..Default::default()
+            },
+        ));
+        assert_eq!(v["equivalent"], Value::Bool(true));
+        assert_eq!(v["comparison"]["ignored_missing_preserved"], "a");
+        assert_eq!(v["summary"]["preserved_difference"], Value::Bool(false));
+        // The raw structural finding is preserved, not masked.
+        assert_eq!(v["preserved"]["kind"], "only_in_b");
+        assert_eq!(v["preserved"]["b"]["literals"][0]["variable"], "x1");
     }
 }

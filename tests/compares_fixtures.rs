@@ -76,6 +76,7 @@ fn odd_even_sum_pair_is_equivalent_under_unordered() {
             match_labels: false,
             label_check: None,
             aux_projection: None,
+            ignore_missing_preserved: None,
         },
     );
     assert!(
@@ -104,6 +105,7 @@ fn colour_pair_matches_edges_by_label_under_match_labels() {
             match_labels: true,
             label_check: None,
             aux_projection: None,
+            ignore_missing_preserved: None,
         },
     );
     assert!(diff.matched_by_label);
@@ -155,6 +157,7 @@ fn colour_pair_collapses_aux_renames_under_ignore_aux_names() {
             match_labels: false,
             label_check: None,
             aux_projection: Some(projection),
+            ignore_missing_preserved: None,
         },
     );
     let s = diff.summary();
@@ -212,6 +215,7 @@ fn unordered_with_label_check_on_odd_even_sum() {
             match_labels: false,
             label_check: Some(opbdiff::compare::ReferenceSide::B),
             aux_projection: None,
+            ignore_missing_preserved: None,
         },
     );
     // Note: this assertion may need refinement once we look more

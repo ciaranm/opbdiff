@@ -77,14 +77,23 @@ is the single source of truth for the version number.
 
 Top level: `schema_version`, `tool_version`, `equivalent` (mirrors the
 exit code: `0` ⇔ `true`, `1` ⇔ `false`), `comparison` (mode,
-`matched_by_label`, `aux_names_ignored`, `projected_variables`),
-`summary` (the flat tally), `objective`, `preserved`, and
-`constraints`.
+`matched_by_label`, `aux_names_ignored`, `projected_variables`,
+`ignored_missing_preserved`), `summary` (the flat tally), `objective`,
+`preserved`, and `constraints`.
 
 `objective` and `preserved` are tagged records with `kind` ∈
 `{both_absent, match, differ, only_in_a, only_in_b}`. Each side carries
 `line`, `raw`, and the canonical content (`terms` for objectives;
 `literals` for preserved).
+
+`comparison.ignored_missing_preserved` is `"a"`/`"b"` when a missing
+`preserved:` line on that file was ignored via
+`--ignore-no-preserved-in`, else `null`. When set, `preserved` still
+reports the true `only_in_*` finding (the data is never hidden), but
+`summary.preserved_difference` is `false` and `equivalent` disregards
+the absence. This field was added in schema version 1 as an additive,
+opt-in-only field, so it does not change output for runs that don't use
+the flag.
 
 `constraints` is an array of tagged records with `kind` ∈ `{differ,
 only_in_a, only_in_b, label_mismatch}`. **Matched constraints are

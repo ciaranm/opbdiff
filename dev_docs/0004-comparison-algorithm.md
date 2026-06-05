@@ -143,6 +143,32 @@ description we discussed: A is the candidate (e.g. solver output
 under test), B is the reference (e.g. expected output). Either is
 selectable for use-cases where the polarity is reversed.
 
+## Ignoring a missing `preserved:` line (`--ignore-no-preserved-in`)
+
+Some encoders never emit a `preserved:` line at all. Compared against
+one that does, that shows up as a one-sided preserved difference and
+fails the verdict, even when nothing else differs.
+`--ignore-no-preserved-in <a|b>` relaxes exactly that case:
+
+- It fires **only** when the named file is the one *lacking* the line,
+  i.e. the `preserved:` line is present solely on the other side (an
+  `OnlyInA`/`OnlyInB` outcome). When it fires, that outcome stops
+  counting towards the verdict, so if it was the only difference the
+  files compare equal and the tool exits 0.
+- It deliberately does **not** touch any other preserved outcome: two
+  files that both carry a `preserved:` line but disagree are a genuine
+  disagreement, and the *other* file missing the line is a different
+  situation the flag was not asked about. Both stay differences.
+
+The relaxation is recorded, not hidden. The structured diff keeps the
+true `OnlyInA`/`OnlyInB` finding; only the verdict is relaxed. The
+plain reporter stays silent about the section but appends
+"missing preserved in A|B ignored" to its mode descriptor, and the JSON
+reporter sets `comparison.ignored_missing_preserved` while still
+emitting the real `preserved` record — consistent with the project's
+"surface differences, fold only on explicit opt-in" stance (the same
+stance behind `--ignore-aux-names`).
+
 ## v1 alignment policy
 
 For human output we currently use exact-bucketing only: a pair is

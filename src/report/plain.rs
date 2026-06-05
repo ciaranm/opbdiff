@@ -40,7 +40,11 @@ pub fn write(out: &mut dyn io::Write, diff: &DiffResult) -> io::Result<()> {
     if write_objective(out, &diff.objective)?.is_some() {
         wrote_any_diff = true;
     }
-    if write_preserved(out, &diff.preserved)?.is_some() {
+    // A one-sided missing `preserved:` line that was ignored via
+    // `--ignore-no-preserved-in` is not a difference: stay silent here
+    // (the relaxation is surfaced in the mode descriptor instead).
+    if diff.ignored_missing_preserved.is_none() && write_preserved(out, &diff.preserved)?.is_some()
+    {
         wrote_any_diff = true;
     }
     for d in &diff.constraints {
@@ -103,6 +107,11 @@ fn mode_descriptor(diff: &DiffResult) -> String {
     };
     if diff.aux_projection.is_some() {
         s.push_str(", aux names ignored");
+    }
+    match diff.ignored_missing_preserved {
+        Some(ReferenceSide::A) => s.push_str(", missing preserved in A ignored"),
+        Some(ReferenceSide::B) => s.push_str(", missing preserved in B ignored"),
+        None => {}
     }
     s
 }
@@ -551,6 +560,7 @@ mod tests {
                 match_labels: false,
                 label_check: None,
                 aux_projection: None,
+                ignore_missing_preserved: None,
             },
         )));
         assert!(plain.contains("Only in A (line"));
@@ -612,6 +622,7 @@ mod tests {
                 match_labels: false,
                 label_check: None,
                 aux_projection: Some(projection),
+                ignore_missing_preserved: None,
             },
         )));
         assert!(plain.contains("aux names ignored"), "got: {plain}");
@@ -636,6 +647,7 @@ mod tests {
                 match_labels: false,
                 label_check: Some(ReferenceSide::B),
                 aux_projection: None,
+                ignore_missing_preserved: None,
             },
         )));
         assert!(plain.contains("Label mismatch"));
@@ -643,5 +655,27 @@ mod tests {
         assert!(plain.contains("expected label: card"));
         assert!(plain.contains("actual label:   (none)"));
         assert!(plain.contains("1 label mismatch"));
+    }
+
+    #[test]
+    fn ignored_missing_preserved_is_silent_but_noted_in_descriptor() {
+        // A lacks preserved:, B has it, constraints agree. With the
+        // ignore option the report shows the success message (no
+        // "Preserved" difference block) and notes the relaxation in the
+        // descriptor.
+        let plain = strip_ansi(&render(&diff_with(
+            "1 x1 >= 1 ;\n",
+            "preserved: x1 ;\n1 x1 >= 1 ;\n",
+            CompareOptions {
+                ignore_missing_preserved: Some(ReferenceSide::A),
+                ..Default::default()
+            },
+        )));
+        assert!(plain.contains("semantically equivalent"), "got: {plain}");
+        assert!(
+            plain.contains("missing preserved in A ignored"),
+            "got: {plain}"
+        );
+        assert!(!plain.contains("Preserved"), "got: {plain}");
     }
 }

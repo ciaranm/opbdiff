@@ -56,6 +56,16 @@ pub struct Args {
     #[arg(short, long, value_enum, default_value_t = ReferenceArg::B)]
     pub reference: ReferenceArg,
 
+    /// Ignore a missing `preserved:` line on the named file. If that
+    /// file has no `preserved:` line but the other one does, the absence
+    /// is treated as equivalent rather than a difference; if it is the
+    /// only difference, the files compare equal and the tool exits 0.
+    /// Other preserved differences (both present but differing, or the
+    /// *other* file missing the line) are still reported. Use this to
+    /// compare against an encoder that never emits `preserved:`.
+    #[arg(long, value_enum, value_name = "FILE")]
+    pub ignore_no_preserved_in: Option<ReferenceArg>,
+
     /// Output format. `plain` is the human-readable text report;
     /// `json` is a stable, machine-readable serialisation for scripts,
     /// tests, and tooling (see `dev_docs/0005-output-formats.md`).
@@ -128,6 +138,7 @@ impl Args {
             // Resolved later, in the binary, once both files are loaded;
             // see `main::run`.
             aux_projection: None,
+            ignore_missing_preserved: self.ignore_no_preserved_in.map(Into::into),
         }
     }
 }

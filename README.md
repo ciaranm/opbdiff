@@ -21,7 +21,8 @@ Two intended uses:
 ## Status
 
 `v0.2` — the originally-scoped v1 feature set plus a JSON output mode
-(`--format json`). APIs and CLI flags are pre-1.0 and may change.
+(`--format json`) and `--ignore-no-preserved-in`. APIs and CLI flags
+are pre-1.0 and may change.
 
 What works:
 
@@ -84,6 +85,7 @@ Options:
 | `--ignore-aux-names`          | Treat any variable not in the projected (`preserved:`) set as auxiliary and compare it by coefficient only, so differences in auxiliary-variable *names* don't count. Needs a `preserved:` line on at least one file (both must agree). |
 | `-L`, `--check-labels`        | Enforce reference-side labels on the candidate.                 |
 | `-r`, `--reference <A\|B>`    | Which side is the label reference (default `B`).                |
+| `--ignore-no-preserved-in <a\|b>` | Treat a *missing* `preserved:` line on the named file as equivalent rather than a difference. Only forgives a one-sided absence on that file; a genuine `preserved:` disagreement, or the *other* file missing the line, is still reported. For encoders that never emit `preserved:`. |
 | `-f`, `--format <plain\|json>` | Output format. `plain` (default) is human-readable text; `json` is the machine-readable schema below. |
 | `--color <auto\|always\|never>` | When to emit ANSI colour (applies to `plain` only). `auto` honours TTY and `NO_COLOR`. |
 
@@ -163,6 +165,18 @@ Label mismatch at constraint A#1 / B#1 (reference=B):
 Summary (unordered): 4 matches, 0 differing, 0 only in A, 0 only in B, 10 label mismatches.
 ```
 
+Ignoring a missing `preserved:` line. Some encoders never emit a
+`preserved:` line; when that is the only thing setting the two files
+apart, `--ignore-no-preserved-in` forgives the named file's absence so
+the comparison still passes. It forgives *only* a one-sided absence on
+that file — a genuine `preserved:` disagreement, or the other file
+missing the line, is still reported:
+
+```
+$ opbdiff --ignore-no-preserved-in a a.opb b.opb
+Files are semantically equivalent (14 constraints compared, ordered, missing preserved in A ignored).
+```
+
 ### JSON output
 
 `--format json` emits a stable, versioned serialisation of the diff
@@ -179,7 +193,7 @@ and in the `report::json` module doc comment.
 $ opbdiff --format json a.opb b.opb
 {
   "schema_version": 1,
-  "tool_version": "0.2.0",
+  "tool_version": "0.2.1",
   "equivalent": false,
   "comparison": { "mode": "ordered", "matched_by_label": false,
                   "aux_names_ignored": false, "projected_variables": null },

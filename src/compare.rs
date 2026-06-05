@@ -62,6 +62,13 @@ pub struct CompareOptions {
     /// [`resolve_aux_projection`]. See
     /// `dev_docs/0004-comparison-algorithm.md`.
     pub aux_projection: Option<HashSet<String>>,
+    /// `Some(side)` ignores a one-sided *missing* `preserved:` line on
+    /// `side`: if `side` carries no `preserved:` line but the other file
+    /// does, that absence is not counted as a difference. Every other
+    /// preserved outcome — both present but differing, or the *other*
+    /// side missing it — is still reported. Intended for comparing
+    /// against an encoder that simply never emits a `preserved:` line.
+    pub ignore_missing_preserved: Option<ReferenceSide>,
 }
 
 /// Error from resolving the projected-variable set that
@@ -163,6 +170,13 @@ pub struct DiffResult {
     /// was enabled (`None` when it was not). The reporter uses it to
     /// fold auxiliary terms in the canonical-form view.
     pub aux_projection: Option<HashSet<String>>,
+    /// `Some(side)` when a one-sided missing `preserved:` line on `side`
+    /// was ignored per [`CompareOptions::ignore_missing_preserved`] *and*
+    /// that file actually was the one missing it. Recorded so reporters
+    /// can note the relaxation and so equivalence treats the absence as a
+    /// match. The `preserved` field still carries the true structural
+    /// outcome (an `OnlyInA`/`OnlyInB`); only the verdict is relaxed.
+    pub ignored_missing_preserved: Option<ReferenceSide>,
     pub objective: ObjectiveDiff,
     pub preserved: PreservedDiff,
     pub constraints: Vec<ConstraintDiff>,
@@ -253,13 +267,21 @@ impl DiffResult {
         matches!(
             self.objective,
             ObjectiveDiff::BothAbsent | ObjectiveDiff::Match
-        ) && matches!(
+        ) && self.preserved_is_equivalent()
+            && self
+                .constraints
+                .iter()
+                .all(|d| matches!(d, ConstraintDiff::Match { .. }))
+    }
+
+    /// Whether the `preserved:` outcome counts as equivalent: both
+    /// absent or matching, or a one-sided absence that was explicitly
+    /// ignored via [`CompareOptions::ignore_missing_preserved`].
+    fn preserved_is_equivalent(&self) -> bool {
+        matches!(
             self.preserved,
             PreservedDiff::BothAbsent | PreservedDiff::Match
-        ) && self
-            .constraints
-            .iter()
-            .all(|d| matches!(d, ConstraintDiff::Match { .. }))
+        ) || self.ignored_missing_preserved.is_some()
     }
 
     pub fn summary(&self) -> Summary {
@@ -277,10 +299,7 @@ impl DiffResult {
             self.objective,
             ObjectiveDiff::BothAbsent | ObjectiveDiff::Match
         );
-        s.preserved_difference = !matches!(
-            self.preserved,
-            PreservedDiff::BothAbsent | PreservedDiff::Match
-        );
+        s.preserved_difference = !self.preserved_is_equivalent();
         s
     }
 }
@@ -295,6 +314,7 @@ pub fn compare_ordered(a: &CanonicalFile, b: &CanonicalFile) -> DiffResult {
             match_labels: false,
             label_check: None,
             aux_projection: None,
+            ignore_missing_preserved: None,
         },
     )
 }
@@ -339,12 +359,24 @@ pub fn compare(a: &CanonicalFile, b: &CanonicalFile, options: CompareOptions) ->
         constraints
     };
 
+    let preserved = compare_preserved(&a.preserved, &b.preserved);
+    // `--ignore-no-preserved-in side` only bites when `side` is the file
+    // that actually lacks the line, i.e. the line survives solely on the
+    // *other* side. Anything else (both present, or the other side
+    // missing) is left as a genuine difference.
+    let ignored_missing_preserved = match (options.ignore_missing_preserved, &preserved) {
+        (Some(ReferenceSide::A), PreservedDiff::OnlyInB(_)) => Some(ReferenceSide::A),
+        (Some(ReferenceSide::B), PreservedDiff::OnlyInA(_)) => Some(ReferenceSide::B),
+        _ => None,
+    };
+
     DiffResult {
         mode: options.mode,
         matched_by_label: options.match_labels,
         aux_projection: options.aux_projection.clone(),
+        ignored_missing_preserved,
         objective: compare_objectives(&a.objective, &b.objective),
-        preserved: compare_preserved(&a.preserved, &b.preserved),
+        preserved,
         constraints,
     }
 }
@@ -723,6 +755,7 @@ mod tests {
                 match_labels: false,
                 label_check: None,
                 aux_projection: None,
+                ignore_missing_preserved: None,
             },
         )
     }
@@ -783,6 +816,7 @@ mod tests {
                 match_labels: false,
                 label_check: Some(reference),
                 aux_projection: None,
+                ignore_missing_preserved: None,
             },
         )
     }
@@ -846,6 +880,7 @@ mod tests {
                 match_labels: true,
                 label_check: None,
                 aux_projection: None,
+                ignore_missing_preserved: None,
             },
         )
     }
@@ -954,6 +989,7 @@ mod tests {
                 match_labels: false,
                 label_check: None,
                 aux_projection: Some(projection),
+                ignore_missing_preserved: None,
             },
         )
     }
@@ -1055,5 +1091,80 @@ mod tests {
         let b = canonical("@two 1 x2 >= 1 ;\n@one 1 x1 >= 1 ;\n");
         let diff = with_label_check(&a, &b, CompareMode::Unordered, ReferenceSide::B);
         assert!(diff.is_equivalent(), "summary: {:?}", diff.summary());
+    }
+
+    // ----- ignore-missing-preserved ------------------------------------
+
+    fn with_ignore_missing_preserved(
+        a: &CanonicalFile,
+        b: &CanonicalFile,
+        side: ReferenceSide,
+    ) -> DiffResult {
+        compare(
+            a,
+            b,
+            CompareOptions {
+                ignore_missing_preserved: Some(side),
+                ..Default::default()
+            },
+        )
+    }
+
+    #[test]
+    fn ignoring_missing_preserved_in_a_makes_otherwise_equal_files_equivalent() {
+        // A has no preserved: line, B does; constraints agree. Without
+        // the flag this is a difference; ignoring A's absence makes the
+        // pair equivalent and clears the summary flag, while `preserved`
+        // still records the true OnlyInB outcome.
+        let a = canonical("1 x1 >= 1 ;\n");
+        let b = canonical("preserved: x1 ;\n1 x1 >= 1 ;\n");
+        assert!(!compare_ordered(&a, &b).is_equivalent());
+
+        let diff = with_ignore_missing_preserved(&a, &b, ReferenceSide::A);
+        assert!(diff.is_equivalent(), "summary: {:?}", diff.summary());
+        assert_eq!(diff.ignored_missing_preserved, Some(ReferenceSide::A));
+        assert!(!diff.summary().preserved_difference);
+        assert!(matches!(diff.preserved, PreservedDiff::OnlyInB(_)));
+    }
+
+    #[test]
+    fn ignoring_missing_preserved_does_not_mask_other_differences() {
+        // A lacks preserved: AND a constraint differs. The preserved
+        // absence is forgiven, but the constraint difference still makes
+        // the pair non-equivalent.
+        let a = canonical("1 x1 >= 1 ;\n");
+        let b = canonical("preserved: x1 ;\n1 x2 >= 1 ;\n");
+        let diff = with_ignore_missing_preserved(&a, &b, ReferenceSide::A);
+        assert!(!diff.is_equivalent());
+        assert!(!diff.summary().preserved_difference);
+        assert_eq!(diff.summary().differing, 1);
+        assert_eq!(diff.ignored_missing_preserved, Some(ReferenceSide::A));
+    }
+
+    #[test]
+    fn ignoring_missing_preserved_in_a_does_not_forgive_b_missing_it() {
+        // The flag names side A, but here it is B that lacks the line.
+        // That is a different situation and must remain a difference.
+        let a = canonical("preserved: x1 ;\n1 x1 >= 1 ;\n");
+        let b = canonical("1 x1 >= 1 ;\n");
+        let diff = with_ignore_missing_preserved(&a, &b, ReferenceSide::A);
+        assert!(!diff.is_equivalent());
+        assert!(diff.summary().preserved_difference);
+        assert_eq!(diff.ignored_missing_preserved, None);
+        assert!(matches!(diff.preserved, PreservedDiff::OnlyInA(_)));
+    }
+
+    #[test]
+    fn ignoring_missing_preserved_does_not_forgive_a_genuine_disagreement() {
+        // Both files carry a preserved: line but they differ. This is a
+        // real disagreement, not a missing line, so the flag leaves it
+        // alone.
+        let a = canonical("preserved: x1 ;\n1 x1 >= 1 ;\n");
+        let b = canonical("preserved: x2 ;\n1 x1 >= 1 ;\n");
+        let diff = with_ignore_missing_preserved(&a, &b, ReferenceSide::A);
+        assert!(!diff.is_equivalent());
+        assert!(diff.summary().preserved_difference);
+        assert_eq!(diff.ignored_missing_preserved, None);
+        assert!(matches!(diff.preserved, PreservedDiff::Differ { .. }));
     }
 }

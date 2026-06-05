@@ -227,3 +227,46 @@ fn json_fixture_pair_serialises_under_unordered() {
     assert_eq!(v["equivalent"], serde_json::Value::Bool(true));
     assert_eq!(v["comparison"]["mode"], "unordered");
 }
+
+#[test]
+fn ignore_no_preserved_in_a_makes_missing_line_equivalent() {
+    // A has no preserved: line, B does, constraints agree. Without the
+    // flag this exits 1; ignoring A's absence makes it equivalent.
+    let a = write_tmp("nopres_a.opb", "1 x1 >= 1 ;\n");
+    let b = write_tmp("nopres_b.opb", "preserved: x1 ;\n1 x1 >= 1 ;\n");
+    run(&a, &b).assert().code(1);
+    let mut cmd = Command::cargo_bin("opbdiff").expect("binary built");
+    cmd.arg("--ignore-no-preserved-in=a")
+        .arg(&a)
+        .arg(&b)
+        .assert()
+        .success()
+        .stdout(contains("semantically equivalent"))
+        .stdout(contains("missing preserved in A ignored"));
+}
+
+#[test]
+fn ignore_no_preserved_in_wrong_side_still_differs() {
+    // The flag names A, but it is B that lacks the line. That stays a
+    // difference and exits 1.
+    let a = write_tmp("nopres2_a.opb", "preserved: x1 ;\n1 x1 >= 1 ;\n");
+    let b = write_tmp("nopres2_b.opb", "1 x1 >= 1 ;\n");
+    let mut cmd = Command::cargo_bin("opbdiff").expect("binary built");
+    cmd.arg("--ignore-no-preserved-in=a")
+        .arg(&a)
+        .arg(&b)
+        .assert()
+        .code(1)
+        .stdout(contains("Preserved only in A"));
+}
+
+#[test]
+fn ignore_no_preserved_in_json_keeps_raw_finding() {
+    let a = write_tmp("nopres3_a.opb", "1 x1 >= 1 ;\n");
+    let b = write_tmp("nopres3_b.opb", "preserved: x1 ;\n1 x1 >= 1 ;\n");
+    let (code, v) = run_json(&["--ignore-no-preserved-in=a"], &a, &b);
+    assert_eq!(code, 0);
+    assert_eq!(v["equivalent"], serde_json::Value::Bool(true));
+    assert_eq!(v["comparison"]["ignored_missing_preserved"], "a");
+    assert_eq!(v["preserved"]["kind"], "only_in_b");
+}
