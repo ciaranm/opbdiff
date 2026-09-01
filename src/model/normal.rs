@@ -27,14 +27,14 @@ pub struct NormaliseError {
 pub enum NormaliseErrorKind {
     #[error("integer overflow during normalisation")]
     Overflow,
-    #[error("more than one `min:` objective in file")]
+    #[error("more than one objective (`min:` / `max:`) in file")]
     MultipleObjectives,
     #[error("more than one `preserved:` line in file")]
     MultiplePreserved,
 }
 
 /// Normalise every item in a parsed OPB file. Errors include
-/// duplicate `min:` / `preserved:` lines and arithmetic overflow.
+/// duplicate objective / `preserved:` lines and arithmetic overflow.
 pub fn normalise_file(file: &OpbFile) -> Result<CanonicalFile, NormaliseError> {
     let mut out = CanonicalFile::default();
     for item in &file.items {
@@ -286,7 +286,14 @@ fn normalise_objective(o: &Objective) -> Result<CanonicalObjective, NormaliseErr
     // accumulated by the negated-literal rewrite are dropped, because
     // shifting an objective by a constant does not change what
     // minimises it.
-    let (var_coefs, _constant_sum) = collect_linear_form(&o.terms, 1).map_err(|()| overflow())?;
+    //
+    // A `max:` objective is negated: VeriPB minimises internally and
+    // negates a maximisation objective on load, keeping no record that
+    // the source said `max:`, so `max: f` and `min: -f` are the same
+    // objective and canonicalise alike.
+    let sign = if o.maximise { -1 } else { 1 };
+    let (var_coefs, _constant_sum) =
+        collect_linear_form(&o.terms, sign).map_err(|()| overflow())?;
 
     let terms: Vec<(String, i64)> = var_coefs.into_iter().filter(|(_, k)| *k != 0).collect();
 
@@ -438,6 +445,52 @@ mod tests {
         let n = normalise_file(&f).unwrap();
         let obj = n.objective.unwrap();
         assert!(obj.form.terms.is_empty());
+    }
+
+    fn objective_terms(input: &str) -> Vec<(String, i64)> {
+        let f = parse(input).expect("parse");
+        let n = normalise_file(&f).expect("normalise");
+        n.objective.expect("objective").form.terms
+    }
+
+    #[test]
+    fn maximisation_objective_is_negated() {
+        // VeriPB minimises internally and negates a `max:` objective on
+        // load, keeping no record of which way it was written, so the
+        // two lines below are the same objective.
+        assert_eq!(
+            objective_terms("max: 1 x1 2 x2 ;\n"),
+            objective_terms("min: -1 x1 -2 x2 ;\n"),
+        );
+        assert_eq!(
+            objective_terms("max: 1 x1 ;\n"),
+            vec![("x1".to_string(), -1)],
+        );
+    }
+
+    #[test]
+    fn maximisation_negates_after_the_negated_literal_rewrite() {
+        // `max: 1 ~x1` is `min: -1 ~x1` is `min: 1 x1` less a constant,
+        // and the constant is dropped either way.
+        assert_eq!(
+            objective_terms("max: 1 ~x1 ;\n"),
+            objective_terms("min: 1 x1 ;\n"),
+        );
+    }
+
+    #[test]
+    fn maximisation_is_not_the_same_as_minimisation() {
+        assert_ne!(
+            objective_terms("max: 1 x1 ;\n"),
+            objective_terms("min: 1 x1 ;\n"),
+        );
+    }
+
+    #[test]
+    fn a_min_and_a_max_line_in_one_file_is_still_two_objectives() {
+        let f = parse("min: 1 x1 ;\nmax: 1 x2 ;\n").unwrap();
+        let err = normalise_file(&f).unwrap_err();
+        assert!(matches!(err.kind, NormaliseErrorKind::MultipleObjectives));
     }
 
     #[test]

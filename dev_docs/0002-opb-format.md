@@ -19,6 +19,7 @@ An OPB file is a sequence of lines. Each line is one of:
 | Labelled     | `@cardinality 1 x1 1 x2 >= 2 ;`  | Compared; label tracked    |
 | Reified      | `z1 ==> 1 x1 1 x2 >= 2 ;`        | Desugared, then compared   |
 | Objective    | `min: 3 x1 2 x2 ;`               | Compared semantically      |
+| Objective    | `max: 3 x1 2 x2 ;`               | Negated, then compared     |
 | Preserved    | `preserved: 1 x1 1 x2 ;`         | Compared semantically      |
 | Blank        | (empty)                          | Skipped                    |
 
@@ -60,8 +61,17 @@ For constraints: `>=`, `<=`. Equality `=` is **not supported in v1**
 and is rejected with a clear error; see
 [0003](0003-normalization.md#equality-constraints) for the reasoning.
 
-For `min:` and `preserved:`, there is no operator — the body is
-purely a term sequence.
+For `min:`, `max:` and `preserved:`, there is no operator — the body
+is purely a term sequence.
+
+## Objectives
+
+A file carries at most one objective line, written either `min:` or
+`max:`. VeriPB always minimises internally and negates a `max:`
+objective on load, so we do the same and the two senses share a
+canonical form; see
+[0003](0003-normalization.md#objectives). A second objective line of
+either kind is an error.
 
 ## Constants
 

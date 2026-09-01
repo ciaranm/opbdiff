@@ -359,3 +359,26 @@ fn json_marks_which_direction_of_an_equivalence_a_constraint_is() {
     // An ordinary constraint has no part.
     assert_eq!(v["constraints"][0]["b"]["part"], serde_json::Value::Null);
 }
+
+#[test]
+fn a_max_objective_equals_the_negated_min_objective() {
+    // VeriPB negates a `max:` objective on load, so the two files
+    // describe the same optimisation problem.
+    let a = write_tmp("maxobj_a.opb", "max: 1 x1 2 x2 ;\n1 x1 1 x2 >= 1 ;\n");
+    let b = write_tmp("maxobj_b.opb", "min: -1 x1 -2 x2 ;\n1 x1 1 x2 >= 1 ;\n");
+    run(&a, &b)
+        .assert()
+        .success()
+        .stdout(contains("semantically equivalent"));
+}
+
+#[test]
+fn a_max_objective_differs_from_the_same_min_objective() {
+    let a = write_tmp("maxobj_c.opb", "max: 1 x1 ;\n1 x1 >= 1 ;\n");
+    let b = write_tmp("maxobj_d.opb", "min: 1 x1 ;\n1 x1 >= 1 ;\n");
+    run(&a, &b)
+        .assert()
+        .code(1)
+        .stdout(contains("Objectives differ"))
+        .stdout(contains("max: 1 x1 ;"));
+}

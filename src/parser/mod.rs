@@ -45,11 +45,16 @@ fn parse_line(raw: &str, line: usize) -> Result<Option<Item>, ParseError> {
     match rest.first() {
         // Only a constraint can carry a label, so `@l min: ...` is an
         // error rather than an objective.
-        Some(Token::Min) if labels.is_empty() => parse_objective(&rest[1..], raw, line).map(Some),
+        Some(Token::Min) if labels.is_empty() => {
+            parse_objective(&rest[1..], raw, line, false).map(Some)
+        }
+        Some(Token::Max) if labels.is_empty() => {
+            parse_objective(&rest[1..], raw, line, true).map(Some)
+        }
         Some(Token::Preserved) if labels.is_empty() => {
             parse_preserved(&rest[1..], raw, line).map(Some)
         }
-        Some(Token::Min | Token::Preserved) => Err(ParseError {
+        Some(Token::Min | Token::Max | Token::Preserved) => Err(ParseError {
             line,
             kind: ParseErrorKind::LabelsOnNonConstraintLine,
         }),
@@ -216,11 +221,17 @@ fn check_label_count(constraint: &Constraint, line: usize) -> Result<(), ParseEr
     }
 }
 
-fn parse_objective(tokens: &[Token<'_>], raw: &str, line: usize) -> Result<Item, ParseError> {
+fn parse_objective(
+    tokens: &[Token<'_>],
+    raw: &str,
+    line: usize,
+    maximise: bool,
+) -> Result<Item, ParseError> {
     let body = strip_trailing_terminator(tokens, line)?;
     let terms = parse_terms(body, line)?;
     Ok(Item::Objective(Objective {
         terms,
+        maximise,
         line,
         raw: raw.to_owned(),
     }))
@@ -619,6 +630,23 @@ mod tests {
             panic!()
         };
         assert_eq!(o.terms.len(), 3);
+    }
+
+    #[test]
+    fn parses_max_objective() {
+        let Item::Objective(o) = parse_one("max: 1 x1 2 x2 ;\n") else {
+            panic!()
+        };
+        assert!(o.maximise);
+        assert_eq!(o.terms.len(), 2);
+    }
+
+    #[test]
+    fn min_objective_is_not_marked_as_maximising() {
+        let Item::Objective(o) = parse_one("min: 1 x1 ;\n") else {
+            panic!()
+        };
+        assert!(!o.maximise);
     }
 
     #[test]

@@ -16,11 +16,14 @@ pub struct CanonicalConstraint {
     pub rhs: i64,
 }
 
-/// A canonical `min:` objective: a sorted term list with no RHS.
+/// A canonical objective: a sorted term list with no RHS, always in
+/// minimisation form.
 ///
 /// Constant terms in the source objective are dropped during
 /// normalisation because shifting an objective by a constant does
-/// not change what minimises it.
+/// not change what minimises it. A `max:` objective is negated, since
+/// VeriPB minimises internally and negates one on load, so `max: f`
+/// and `min: -f` share a canonical form.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CanonicalObjective {
     pub terms: Vec<(String, i64)>,

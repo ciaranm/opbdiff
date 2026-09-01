@@ -69,6 +69,11 @@ pub enum Op {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Objective {
     pub terms: Vec<Term>,
+    /// True for a `max:` line. VeriPB always minimises internally and
+    /// negates a maximisation objective on load, so this is resolved
+    /// during normalisation rather than carried into the canonical
+    /// form; see `dev_docs/0003-normalization.md#objectives`.
+    pub maximise: bool,
     pub line: usize,
     pub raw: String,
 }

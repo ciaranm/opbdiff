@@ -34,8 +34,10 @@ pub(crate) enum Token<'a> {
     /// The `<==>` arrow of an equivalence.
     Equivalence,
     Semicolon,
-    /// The `min:` keyword introducing an objective line.
+    /// The `min:` keyword introducing a minimisation objective line.
     Min,
+    /// The `max:` keyword introducing a maximisation objective line.
+    Max,
     /// The `preserved:` keyword introducing a preserved-variables line.
     Preserved,
     /// A token that looked like a coefficient but did not fit in `i64`.
@@ -69,6 +71,7 @@ fn classify(token: &str) -> Token<'_> {
         "<==>" => Token::Equivalence,
         ";" => Token::Semicolon,
         "min:" => Token::Min,
+        "max:" => Token::Max,
         "preserved:" => Token::Preserved,
         _ => {
             if let Some(name) = token.strip_prefix('@') {
@@ -110,6 +113,7 @@ mod tests {
         assert_eq!(classify("="), Token::Equal);
         assert_eq!(classify(";"), Token::Semicolon);
         assert_eq!(classify("min:"), Token::Min);
+        assert_eq!(classify("max:"), Token::Max);
         assert_eq!(classify("preserved:"), Token::Preserved);
     }
 

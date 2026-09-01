@@ -10,9 +10,9 @@ structured diff result. This document defines its behaviour.
 For comparison purposes a canonical model is split into named
 sections:
 
-- **objective** (`min:`): at most one per file. Either both files
-  have one and they are compared, or neither does, or it is a
-  per-side missing/extra mismatch.
+- **objective** (`min:` / `max:`, compared in minimisation form): at
+  most one per file. Either both files have one and they are compared,
+  or neither does, or it is a per-side missing/extra mismatch.
 - **preserved** (`preserved:`): same shape as objective.
 - **constraints**: ordered sequence (or multiset under
   `--unordered`).

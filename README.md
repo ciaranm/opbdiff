@@ -30,9 +30,9 @@ Two intended uses:
 
 `v0.4` — the originally-scoped v1 feature set plus a JSON output mode
 (`--format json`), `--ignore-no-preserved-in`, label-permutation
-detection under `--match-labels`, and VeriPB's reification shorthands
-(`==>`, `<==`, `<==>`). APIs and CLI flags are pre-1.0 and may
-change.
+detection under `--match-labels`, VeriPB's reification shorthands
+(`==>`, `<==`, `<==>`), and `max:` objectives. APIs and CLI flags are
+pre-1.0 and may change.
 
 What works:
 
@@ -47,6 +47,9 @@ What works:
   constraints VeriPB loads them as and compare equal to a file that
   writes those constraints out. An equivalence stands for two
   constraints and takes one label for each, `==>` first.
+- `min:` and `max:` objectives. VeriPB minimises internally and negates
+  a `max:` objective on load, so `max: f` and `min: -f` compare equal
+  (and `max: f` and `min: f` do not).
 - Ordered (by position) and `--unordered` (multiset) comparison.
 - `--match-labels`: pair constraints by shared label first, then diff
   each pair's contents (with the remainder handled by the fallback
@@ -265,7 +268,7 @@ and in the `report::json` module doc comment.
 $ opbdiff --format json a.opb b.opb
 {
   "schema_version": 1,
-  "tool_version": "0.4.0",
+  "tool_version": "0.4.1",
   "equivalent": false,
   "comparison": { "mode": "ordered", "matched_by_label": false,
                   "aux_names_ignored": false, "projected_variables": null },
