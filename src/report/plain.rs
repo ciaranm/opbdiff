@@ -17,7 +17,7 @@ use crate::compare::{
     CompareMode, ConstraintDiff, DiffResult, LabelPermutation, ObjectiveDiff, PreservedDiff,
     ReferenceSide,
 };
-use crate::model::CanonicalConstraint;
+use crate::model::{CanonicalConstraint, CanonicalLabelledConstraint};
 
 // ---- styles -----------------------------------------------------------
 
@@ -235,8 +235,8 @@ fn write_constraint(
                 b.line,
                 label = shared_label_tag(a.label.as_deref(), b.label.as_deref()),
             )?;
-            writeln!(out, "{A_LINE}  A: {}{A_LINE:#}", a.raw.trim())?;
-            writeln!(out, "{B_LINE}  B: {}{B_LINE:#}", b.raw.trim())?;
+            writeln!(out, "{A_LINE}  A: {}{A_LINE:#}", constraint_source(a))?;
+            writeln!(out, "{B_LINE}  B: {}{B_LINE:#}", constraint_source(b))?;
             // If this difference is just a permuted label, the canonical
             // forms are wholly unequal but reappear under another label;
             // the one-line correspondence is far more useful than a
@@ -271,7 +271,7 @@ fn write_constraint(
                     writeln!(out, "{A_HEAD}Only in A (line {}):{A_HEAD:#}", a.line)?
                 }
             }
-            writeln!(out, "{A_LINE}  A: {}{A_LINE:#}", a.raw.trim())?;
+            writeln!(out, "{A_LINE}  A: {}{A_LINE:#}", constraint_source(a))?;
             Ok(Some(()))
         }
 
@@ -287,7 +287,7 @@ fn write_constraint(
                     writeln!(out, "{B_HEAD}Only in B (line {}):{B_HEAD:#}", b.line)?
                 }
             }
-            writeln!(out, "{B_LINE}  B: {}{B_LINE:#}", b.raw.trim())?;
+            writeln!(out, "{B_LINE}  B: {}{B_LINE:#}", constraint_source(b))?;
             Ok(Some(()))
         }
 
@@ -310,10 +310,21 @@ fn write_constraint(
             )?;
             writeln!(out, "  expected label: {}", ref_label.unwrap_or("(none)"))?;
             writeln!(out, "  actual label:   {}", cand_label.unwrap_or("(none)"))?;
-            writeln!(out, "{A_LINE}  A: {}{A_LINE:#}", a.raw.trim())?;
-            writeln!(out, "{B_LINE}  B: {}{B_LINE:#}", b.raw.trim())?;
+            writeln!(out, "{A_LINE}  A: {}{A_LINE:#}", constraint_source(a))?;
+            writeln!(out, "{B_LINE}  B: {}{B_LINE:#}", constraint_source(b))?;
             Ok(Some(()))
         }
+    }
+}
+
+/// The source line to show for a constraint. When a line stands for
+/// more than one constraint — an equivalence, which is loaded as its
+/// `==>` direction followed by its `<==` direction — the raw text alone
+/// is ambiguous, so the direction this entry came from is appended.
+fn constraint_source(c: &CanonicalLabelledConstraint) -> String {
+    match c.part {
+        None => c.raw.trim().to_string(),
+        Some(part) => format!("{}   [{} direction]", c.raw.trim(), part.arrow()),
     }
 }
 

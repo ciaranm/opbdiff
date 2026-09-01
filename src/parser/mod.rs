@@ -4,7 +4,7 @@
 mod ast;
 mod lexer;
 
-pub use ast::{Constraint, Item, Literal, Objective, Op, OpbFile, Preserved, Term};
+pub use ast::{Constraint, Item, Literal, Objective, Op, OpbFile, Preserved, Reification, Term};
 
 use lexer::{Token, tokenize_line};
 
@@ -33,19 +33,32 @@ fn parse_line(raw: &str, line: usize) -> Result<Option<Item>, ParseError> {
     if tokens.is_empty() {
         return Ok(None);
     }
-    match &tokens[0] {
-        Token::Min => parse_objective(&tokens[1..], raw, line).map(Some),
-        Token::Preserved => parse_preserved(&tokens[1..], raw, line).map(Some),
-        Token::Label(name) => {
-            let name = (*name).to_owned();
-            parse_constraint(Some(name), &tokens[1..], raw, line).map(Some)
+    // A constraint line may carry several labels: one for each
+    // constraint the line stands for. Collect them all before deciding
+    // what kind of line this is.
+    let mut labels = Vec::new();
+    let mut rest = &tokens[..];
+    while let Some(Token::Label(name)) = rest.first() {
+        labels.push((*name).to_owned());
+        rest = &rest[1..];
+    }
+    match rest.first() {
+        // Only a constraint can carry a label, so `@l min: ...` is an
+        // error rather than an objective.
+        Some(Token::Min) if labels.is_empty() => parse_objective(&rest[1..], raw, line).map(Some),
+        Some(Token::Preserved) if labels.is_empty() => {
+            parse_preserved(&rest[1..], raw, line).map(Some)
         }
-        _ => parse_constraint(None, &tokens, raw, line).map(Some),
+        Some(Token::Min | Token::Preserved) => Err(ParseError {
+            line,
+            kind: ParseErrorKind::LabelsOnNonConstraintLine,
+        }),
+        _ => parse_constraint(labels, rest, raw, line).map(Some),
     }
 }
 
 fn parse_constraint(
-    label: Option<String>,
+    labels: Vec<String>,
     tokens: &[Token<'_>],
     raw: &str,
     line: usize,
@@ -73,18 +86,134 @@ fn parse_constraint(
     let lhs_tokens = &tokens[..op_pos];
     let rhs_tokens = &tokens[op_pos + 1..];
 
-    let terms = parse_terms(lhs_tokens, line)?;
+    // A reification shorthand puts its literals and arrow in front of
+    // the constraint proper, so split those off before reading terms.
+    let (reification, term_tokens) = split_reification(lhs_tokens, line)?;
+
+    let terms = parse_terms(term_tokens, line)?;
     let (rhs, after) = read_rhs(rhs_tokens, line)?;
     require_terminator(after, line)?;
 
-    Ok(Item::Constraint(Constraint {
-        label,
+    let constraint = Constraint {
+        labels,
+        reification,
         terms,
         op,
         rhs,
         line,
         raw: raw.to_owned(),
-    }))
+    };
+    check_label_count(&constraint, line)?;
+    Ok(Item::Constraint(constraint))
+}
+
+/// Split a reification shorthand off the front of a constraint's
+/// left-hand side. Returns the shorthand (if any) and the tokens of the
+/// constraint proper.
+fn split_reification<'a, 'b>(
+    lhs: &'a [Token<'b>],
+    line: usize,
+) -> Result<(Option<Reification>, &'a [Token<'b>]), ParseError> {
+    let Some(arrow_pos) = lhs.iter().position(|t| {
+        matches!(
+            t,
+            Token::RightImplication | Token::LeftImplication | Token::Equivalence
+        )
+    }) else {
+        return Ok((None, lhs));
+    };
+
+    let arrow = &lhs[arrow_pos];
+    let name = arrow_name(arrow);
+    let literals = reification_literals(&lhs[..arrow_pos], name, line)?;
+
+    let reification = match arrow {
+        Token::RightImplication => Reification::LiteralsImplyConstraint(literals),
+        // A left implication and an equivalence reify a single literal.
+        Token::LeftImplication => {
+            Reification::ConstraintImpliesLiteral(single_literal(literals, name, line)?)
+        }
+        Token::Equivalence => Reification::Equivalence(single_literal(literals, name, line)?),
+        _ => unreachable!("arrow_pos was filtered above"),
+    };
+    Ok((Some(reification), &lhs[arrow_pos + 1..]))
+}
+
+fn arrow_name(token: &Token<'_>) -> &'static str {
+    match token {
+        Token::RightImplication => "==>",
+        Token::LeftImplication => "<==",
+        Token::Equivalence => "<==>",
+        _ => unreachable!("not an arrow"),
+    }
+}
+
+/// Read the literals in front of a reification arrow. There has to be
+/// at least one, and nothing but literals.
+fn reification_literals(
+    tokens: &[Token<'_>],
+    arrow: &'static str,
+    line: usize,
+) -> Result<Vec<Literal>, ParseError> {
+    if tokens.is_empty() {
+        return Err(ParseError {
+            line,
+            kind: ParseErrorKind::EmptyReification(arrow),
+        });
+    }
+    tokens
+        .iter()
+        .map(|tok| match tok {
+            Token::PositiveLiteral(name) => Ok(Literal {
+                variable: (*name).to_owned(),
+                negated: false,
+            }),
+            Token::NegatedLiteral(name) => Ok(Literal {
+                variable: (*name).to_owned(),
+                negated: true,
+            }),
+            other => Err(ParseError {
+                line,
+                kind: ParseErrorKind::NonLiteralInReification {
+                    arrow,
+                    token: format!("{other:?}"),
+                },
+            }),
+        })
+        .collect()
+}
+
+fn single_literal(
+    literals: Vec<Literal>,
+    arrow: &'static str,
+    line: usize,
+) -> Result<Literal, ParseError> {
+    match <[Literal; 1]>::try_from(literals) {
+        Ok([literal]) => Ok(literal),
+        Err(literals) => Err(ParseError {
+            line,
+            kind: ParseErrorKind::MultipleLiteralsInReification {
+                arrow,
+                count: literals.len(),
+            },
+        }),
+    }
+}
+
+/// A line carries either no labels at all or exactly one for each
+/// constraint it stands for, since the i-th label names the i-th
+/// constraint. Any other number is an error, as it is in VeriPB.
+fn check_label_count(constraint: &Constraint, line: usize) -> Result<(), ParseError> {
+    let expected = constraint.constraint_count();
+    let found = constraint.labels.len();
+    if found == 0 || found == expected {
+        Ok(())
+    } else {
+        Err(ParseError {
+            line,
+            kind: ParseErrorKind::LabelCount { expected, found },
+        })
+    }
 }
 
 fn parse_objective(tokens: &[Token<'_>], raw: &str, line: usize) -> Result<Item, ParseError> {
@@ -265,6 +394,18 @@ pub enum ParseErrorKind {
     UnexpectedTrailingTokens(String),
     #[error("unexpected token in preserved line: {0}")]
     UnexpectedTokenInPreserved(String),
+    #[error("`{0}` needs at least one literal in front of it")]
+    EmptyReification(&'static str),
+    #[error("expected a literal in front of `{arrow}`, found {token}")]
+    NonLiteralInReification { arrow: &'static str, token: String },
+    #[error("`{arrow}` reifies a single literal, but found {count}")]
+    MultipleLiteralsInReification { arrow: &'static str, count: usize },
+    #[error(
+        "this line stands for {expected} constraints, so it takes either no labels or {expected}, but found {found}"
+    )]
+    LabelCount { expected: usize, found: usize },
+    #[error("labels can only be attached to constraints")]
+    LabelsOnNonConstraintLine,
 }
 
 #[cfg(test)]
@@ -284,7 +425,7 @@ mod tests {
         };
         assert_eq!(c.op, Op::GreaterOrEqual);
         assert_eq!(c.rhs, 2);
-        assert_eq!(c.label, None);
+        assert!(c.labels.is_empty());
         assert_eq!(c.terms.len(), 2);
     }
 
@@ -310,7 +451,7 @@ mod tests {
         let Item::Constraint(c) = parse_one("@cardinality 1 x1 1 x2 1 x3 >= 2 ;\n") else {
             panic!()
         };
-        assert_eq!(c.label.as_deref(), Some("cardinality"));
+        assert_eq!(c.labels, ["cardinality"]);
         assert_eq!(c.terms.len(), 3);
     }
 
@@ -320,7 +461,7 @@ mod tests {
         else {
             panic!()
         };
-        assert_eq!(c.label.as_deref(), Some("c[_1]"));
+        assert_eq!(c.labels, ["c[_1]"]);
         let Term::Linear {
             coefficient,
             literal,
@@ -331,6 +472,145 @@ mod tests {
         assert_eq!(*coefficient, 16);
         assert_eq!(literal.variable, "x[money_a_d][0_1]");
         assert!(literal.negated);
+    }
+
+    #[test]
+    fn parses_right_implication() {
+        let Item::Constraint(c) = parse_one("x1 ~x2 ==> 1 x3 1 x4 >= 1 ;\n") else {
+            panic!()
+        };
+        let Some(Reification::LiteralsImplyConstraint(lits)) = &c.reification else {
+            panic!("expected a right implication, got {:?}", c.reification)
+        };
+        assert_eq!(lits.len(), 2);
+        assert_eq!(lits[0].variable, "x1");
+        assert!(!lits[0].negated);
+        assert_eq!(lits[1].variable, "x2");
+        assert!(lits[1].negated);
+        // The constraint proper is everything after the arrow.
+        assert_eq!(c.terms.len(), 2);
+        assert_eq!(c.rhs, 1);
+        assert_eq!(c.constraint_count(), 1);
+    }
+
+    #[test]
+    fn parses_left_implication() {
+        let Item::Constraint(c) = parse_one("x1 <== 1 x3 1 x4 >= 1 ;\n") else {
+            panic!()
+        };
+        let Some(Reification::ConstraintImpliesLiteral(lit)) = &c.reification else {
+            panic!("expected a left implication, got {:?}", c.reification)
+        };
+        assert_eq!(lit.variable, "x1");
+        assert_eq!(c.constraint_count(), 1);
+    }
+
+    #[test]
+    fn parses_equivalence_with_two_labels() {
+        let Item::Constraint(c) = parse_one("@right @left z1 <==> 1 x1 1 x2 >= 1 ;\n") else {
+            panic!()
+        };
+        assert_eq!(c.labels, ["right", "left"]);
+        let Some(Reification::Equivalence(lit)) = &c.reification else {
+            panic!("expected an equivalence, got {:?}", c.reification)
+        };
+        assert_eq!(lit.variable, "z1");
+        assert_eq!(c.constraint_count(), 2);
+    }
+
+    #[test]
+    fn equivalence_may_carry_no_labels_at_all() {
+        let Item::Constraint(c) = parse_one("z1 <==> 1 x1 >= 1 ;\n") else {
+            panic!()
+        };
+        assert!(c.labels.is_empty());
+    }
+
+    #[test]
+    fn reification_works_with_a_le_operator() {
+        let Item::Constraint(c) = parse_one("z1 <== 1 x1 <= 3 ;\n") else {
+            panic!()
+        };
+        assert_eq!(c.op, Op::LessOrEqual);
+        assert!(matches!(
+            c.reification,
+            Some(Reification::ConstraintImpliesLiteral(_))
+        ));
+    }
+
+    #[test]
+    fn left_implication_rejects_several_literals() {
+        // `<==` and `<==>` reify a single literal; only `==>` takes a
+        // conjunction.
+        let err = parse("x1 x2 <== 1 x3 >= 1 ;\n").unwrap_err();
+        assert!(matches!(
+            err.kind,
+            ParseErrorKind::MultipleLiteralsInReification {
+                arrow: "<==",
+                count: 2
+            }
+        ));
+    }
+
+    #[test]
+    fn equivalence_rejects_several_literals() {
+        let err = parse("x1 x2 <==> 1 x3 >= 1 ;\n").unwrap_err();
+        assert!(matches!(
+            err.kind,
+            ParseErrorKind::MultipleLiteralsInReification { arrow: "<==>", .. }
+        ));
+    }
+
+    #[test]
+    fn reification_needs_at_least_one_literal() {
+        let err = parse("==> 1 x1 >= 1 ;\n").unwrap_err();
+        assert!(matches!(err.kind, ParseErrorKind::EmptyReification("==>")));
+    }
+
+    #[test]
+    fn only_literals_may_precede_an_arrow() {
+        let err = parse("1 x1 ==> 1 x2 >= 1 ;\n").unwrap_err();
+        assert!(matches!(
+            err.kind,
+            ParseErrorKind::NonLiteralInReification { arrow: "==>", .. }
+        ));
+    }
+
+    #[test]
+    fn a_line_takes_no_labels_or_one_per_constraint() {
+        // An equivalence stands for two constraints, so one label is
+        // ambiguous: which of the two would it name?
+        let err = parse("@only z1 <==> 1 x1 >= 1 ;\n").unwrap_err();
+        assert!(matches!(
+            err.kind,
+            ParseErrorKind::LabelCount {
+                expected: 2,
+                found: 1
+            }
+        ));
+
+        // And an ordinary constraint stands for one, so two is an error
+        // the other way round.
+        let err = parse("@one @two 1 x1 >= 1 ;\n").unwrap_err();
+        assert!(matches!(
+            err.kind,
+            ParseErrorKind::LabelCount {
+                expected: 1,
+                found: 2
+            }
+        ));
+    }
+
+    #[test]
+    fn labels_are_rejected_on_non_constraint_lines() {
+        for input in ["@l min: 1 x1 ;\n", "@l preserved: x1 ;\n"] {
+            let err = parse(input).unwrap_err();
+            assert!(
+                matches!(err.kind, ParseErrorKind::LabelsOnNonConstraintLine),
+                "got {:?} for {input}",
+                err.kind
+            );
+        }
     }
 
     #[test]

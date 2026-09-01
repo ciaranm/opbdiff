@@ -1,6 +1,6 @@
 # Output formats
 
-> Drafted by AI assistant under human oversight. Last updated 2026-05-29.
+> Drafted by AI assistant under human oversight. Last updated 2026-09-01.
 
 `opbdiff`'s diff result is a structured value that lives in the
 library. Reporters render it for output. We plan four reporters; v1
@@ -125,6 +125,16 @@ still a real disagreement, so `equivalent` stays `false`. Like
 schema version 1, so runs that don't use `--match-labels` are
 unaffected. See `dev_docs/0004-comparison-algorithm.md` for how the
 permutation is computed.
+
+### Constraint sides
+
+Each side of a constraint entry carries `label`, `line`, `raw`, `part`
+and `form`. `part` is `"right_implication"`, `"left_implication"`, or
+`null`: an equivalence (`<==>`) line stands for two constraints, so
+two entries can share a `line` and `raw`, and a consumer keying on the
+source line needs `part` to tell them apart. It was added as an
+additive field within schema version 1 and is `null` for every file
+that uses no reification shorthands.
 
 ## Stage 4: side-by-side
 

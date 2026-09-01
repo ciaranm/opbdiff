@@ -1,6 +1,6 @@
 # Normalisation: defining semantic equivalence
 
-> Drafted by AI assistant under human oversight. Last updated 2026-05-29.
+> Drafted by AI assistant under human oversight. Last updated 2026-09-01.
 
 Two constraints are considered semantically equivalent by `opbdiff` if
 and only if they reduce to the same canonical form by the procedure
@@ -105,6 +105,102 @@ Canonical form: `( [(x1,1), (x2,1), (x3,1)], 2 )`.
 
 Canonical form: `( [(x1,1), (x2,1), (x3,1)], 2 )`. ✓ matches A.
 
+## Reification shorthands
+
+VeriPB's `==>`, `<==` and `<==>` are syntactic sugar (see
+[0002](0002-opb-format.md#reification-shorthands)). We desugar them
+into the constraints they stand for, so a file using a shorthand
+compares equal to one writing the expansion out. The rules below are
+taken from VeriPB itself — `veripb-parser/src/terms.rs` and
+`GeneralPBConstraint::get_lit_reification` in
+`veripb-formula/src/general_pb_constraint.rs`, with the worked
+examples in its `proof_format_overview.md` — and every one of those
+examples is a test in `src/model/normal.rs`.
+
+### The two derived quantities
+
+Reification carries the reified literals at a coefficient that depends
+on the constraint's **normalised degree**, which is the degree VeriPB
+uses internally: every coefficient made positive by rewriting
+`-a · x` as `a · ~x - a`, which moves `a` to the right-hand side.
+That is not the RHS of our canonical form, but it is computable from
+it. Given a constraint already in canonical form `Σ kᵥ · v >= R`:
+
+```
+D  =  R + Σ |kᵥ|   over the negative coefficients      (normalised degree)
+S  =  Σ |kᵥ|       over all coefficients               (coefficient sum)
+```
+
+**`D` has to be read off the constraint after normalisation.** Terms
+that cancel each other change it, and a reification built on the
+degree as written would be too strong. `z ==> 1 x2 1 ~x2 1 x1 >= 2`
+has `D = 1`, not the 2 on the page.
+
+### `l₁ … lₘ ==> C`
+
+The conjunction of the literals implies `C`. Each literal is negated
+and added to `C` with `C`'s degree as coefficient, so falsifying any
+one of them satisfies the constraint on its own:
+
+```
+add the term  D · ~lⱼ  to the left-hand side for each lⱼ, keeping the RHS
+```
+
+then re-run the last steps of normalisation over the result, since a
+reified literal may share a variable with the constraint it reifies.
+
+If `D <= 0` the constraint is trivially satisfied, so it is implied by
+anything and **loses its literals entirely** — carrying them at a
+degree that is not positive would give a constraint that is too
+strong. `z1 z2 ==> 1 x1 >= -1` is just `1 x1 >= -1`.
+
+### `z <== C`
+
+`C` implies `z`. Here it is `C` that is negated, and `z` is added to
+that negation with the negation's degree as coefficient:
+
+```
+¬C     =  Σ (-kᵥ) · v >= 1 - R
+D'     =  S - D + 1                     (the degree of ¬C)
+result =  ¬C with the term D' · z added to the left-hand side
+```
+
+If `D > S` the constraint is contradicting, so it implies anything and
+its (trivially satisfied) negation is the whole of what it stands for,
+with no `z` term: `z1 <== 1 x1 >= 5` is `1 ~x1 >= -3`.
+
+### `z <==> C`
+
+Both of the above over the same `C`, as two constraints, in the order
+VeriPB loads them: the `==>` direction first, then the `<==`
+direction. This is the only line that produces two canonical
+constraints, and it takes one label for each of them.
+
+### Worked example
+
+`z1 <== +1 x1 +2 x2 >= 2`, which VeriPB documents as loading to
+`2 z1 1 ~x1 2 ~x2 >= 2`:
+
+- Canonical `C`: `[(x1,1), (x2,2)]`, RHS `2`. No negative
+  coefficients, so `D = 2`; `S = 1 + 2 = 3`.
+- `D > S`? No (`2 <= 3`), so the literal stays.
+- `¬C`: `[(x1,-1), (x2,-2)]`, RHS `1 - 2 = -1`.
+- `D' = 3 - 2 + 1 = 2`; add `2 · z1`, a positive literal, so it only
+  adds a term: `[(x1,-1), (x2,-2), (z1,2)]`, RHS `-1`.
+
+Normalising VeriPB's `2 z1 1 ~x1 2 ~x2 >= 2` directly: the negated
+literals contribute `-1 x1`, `-2 x2` and LHS constants `1 + 2 = 3`,
+giving RHS `2 - 3 = -1` and the same term list. ✓
+
+### What this does *not* paper over
+
+We reproduce VeriPB's expansion exactly, which means a *different*
+but also correct reification — the same constraint with a larger
+big-M on the reified literal, say — is reported as a difference. That
+is the same stance as the coefficient-scaling rule below: an encoder
+that picks a different big-M is a difference worth seeing, not one to
+hide.
+
 ## Equality constraints
 
 VeriPB rewrites `a = b` into the two inequalities `a >= b` and
@@ -114,6 +210,13 @@ labels and line numbers must round-trip across that rewrite. We have
 not yet committed to an answer, so the parser rejects `=` for now and
 the comparison engine never sees it. Practical concern is low: the
 use-cases we care about today do not emit equality lines.
+
+Note that the label rule already generalises to equalities: VeriPB
+loads `@sum_lo @sum_hi 1 x1 1 x2 = 1 ;` as the `>=` direction named
+`@sum_lo` and the `<=` direction named `@sum_hi`, exactly as an
+equivalence names its two directions. The machinery a line standing
+for two constraints needs is therefore already in place; only the
+semantics of comparing `=` against a `>=` / `<=` pair is undecided.
 
 When we revisit this, candidate behaviours include:
 - Reject in both files (status quo).
@@ -132,4 +235,6 @@ When we revisit this, candidate behaviours include:
   paper over.
 - We **do not** infer that one constraint is implied by another. We
   compare syntactic-after-normalisation equivalence, not logical
-  entailment.
+  entailment. Desugaring a reification shorthand is not an exception:
+  it produces the constraint VeriPB itself would load, and comparison
+  still happens on canonical forms.

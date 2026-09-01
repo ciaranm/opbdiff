@@ -36,12 +36,42 @@ pub struct CanonicalPreserved {
 
 /// A canonical constraint together with the source-level metadata the
 /// reporter needs (label, line number, original text).
+///
+/// One source line can stand for more than one constraint — an
+/// equivalence (`<==>`) stands for two — in which case several of
+/// these share a `line` and `raw` and are told apart by `part`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CanonicalLabelledConstraint {
     pub label: Option<String>,
     pub form: CanonicalConstraint,
     pub line: usize,
     pub raw: String,
+    /// Which constraint of its source line this is, when the line
+    /// stands for more than one. `None` for a line that stands for a
+    /// single constraint, which is every line but an equivalence.
+    pub part: Option<ConstraintPart>,
+}
+
+/// Which half of a source line standing for two constraints this is.
+/// An equivalence is loaded as its `==>` direction followed by its
+/// `<==` direction, and the i-th label on the line names the i-th of
+/// them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ConstraintPart {
+    /// The `==>` direction of an equivalence.
+    RightImplication,
+    /// The `<==` direction of an equivalence.
+    LeftImplication,
+}
+
+impl ConstraintPart {
+    /// The arrow this part is written with, for reports.
+    pub fn arrow(self) -> &'static str {
+        match self {
+            ConstraintPart::RightImplication => "==>",
+            ConstraintPart::LeftImplication => "<==",
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

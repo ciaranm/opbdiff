@@ -11,6 +11,14 @@ bytes. For example, these two lines describe the same constraint and
 +1 ~x3 +1 ~x2 +1 ~x1 <= 1 ;
 ```
 
+The same goes for VeriPB's reification shorthands, which are
+syntactic sugar for ordinary constraints:
+
+```
+z1 <== +1 x1 +2 x2 >= 2 ;
+2 z1 1 ~x1 2 ~x2 >= 2 ;
+```
+
 Two intended uses:
 
 - Comparing before-and-after OPB output when a change to a
@@ -20,10 +28,11 @@ Two intended uses:
 
 ## Status
 
-`v0.3` — the originally-scoped v1 feature set plus a JSON output mode
-(`--format json`), `--ignore-no-preserved-in`, and label-permutation
-detection under `--match-labels`. APIs and CLI flags are pre-1.0 and
-may change.
+`v0.4` — the originally-scoped v1 feature set plus a JSON output mode
+(`--format json`), `--ignore-no-preserved-in`, label-permutation
+detection under `--match-labels`, and VeriPB's reification shorthands
+(`==>`, `<==`, `<==>`). APIs and CLI flags are pre-1.0 and may
+change.
 
 What works:
 
@@ -33,6 +42,11 @@ What works:
   rewritten via `~x = 1 - x`, like terms combined, LHS constants moved
   to the RHS, zero-coefficient terms dropped, lexicographic sort. See
   [`dev_docs/0003-normalization.md`](dev_docs/0003-normalization.md).
+- Reification shorthands. `z1 z2 ==> 1 x1 2 x2 >= 2`, `z1 <== …` and
+  `z1 <==> …` are syntactic sugar, so they are desugared into the
+  constraints VeriPB loads them as and compare equal to a file that
+  writes those constraints out. An equivalence stands for two
+  constraints and takes one label for each, `==>` first.
 - Ordered (by position) and `--unordered` (multiset) comparison.
 - `--match-labels`: pair constraints by shared label first, then diff
   each pair's contents (with the remainder handled by the fallback
@@ -53,6 +67,13 @@ Documented v1 limitations:
 - Equality constraints (`=`) are rejected with a clear error.
   Practical concern is low; rationale in
   [`dev_docs/0003-normalization.md`](dev_docs/0003-normalization.md).
+- Operators must be whitespace-separated (`1 x1 >= 1 ;`, not
+  `1 x1>=1;`), the `;` terminator aside. VeriPB's own lexer is more
+  permissive; no file we have seen needs it.
+- A reification is compared against the exact expansion VeriPB
+  produces, so an encoder that reifies the same constraint with a
+  different big-M shows up as a difference rather than being folded
+  away.
 - Auxiliary-variable name differences across the two files are
   surfaced by default rather than silently equated, since spotting them
   is part of the use-case. Opt in to folding them with
@@ -157,6 +178,29 @@ objective and `preserved:` differences. "Auxiliary" means any variable
 not in the projected `preserved:` set; at least one file must carry
 that line, and if both do they must agree.
 
+Reification shorthands are desugared, so a file writing `z1 <== …`
+compares equal to one writing the constraint that stands for — while a
+reification that is genuinely *wrong* still shows up. Here one encoder
+carries the reified literal at 5 where the degree of the negated
+constraint is 4:
+
+```
+$ opbdiff reified.opb reified.verifiedopb
+Differing at constraint #6 [@c[a][hit]] (A line 11, B line 7):
+  A: @c[a][hit] hit <== 1 i[a][b0] 2 i[a][b1] 4 i[a][b2] >= 4 ;
+  B: @c[a][hit] 5 hit 1 ~i[a][b0] 2 ~i[a][b1] 4 ~i[a][b2] >= 4 ;
+  canonical-form view (sorted):
+    hit   A=+4   B=+5
+    (4 identical rows hidden)
+```
+
+An equivalence (`<==>`) stands for two constraints, so both halves
+share a source line and the report says which one it is showing:
+
+```
+  A: @right @left z1 <==> 1 x1 1 x2 >= 1 ;   [<== direction]
+```
+
 Enforcing labels with `b.opb` as the reference:
 
 ```
@@ -221,7 +265,7 @@ and in the `report::json` module doc comment.
 $ opbdiff --format json a.opb b.opb
 {
   "schema_version": 1,
-  "tool_version": "0.3.0",
+  "tool_version": "0.4.0",
   "equivalent": false,
   "comparison": { "mode": "ordered", "matched_by_label": false,
                   "aux_names_ignored": false, "projected_variables": null },
@@ -233,10 +277,10 @@ $ opbdiff --format json a.opb b.opb
   "constraints": [
     {
       "kind": "differ", "index_a": 1, "index_b": 1,
-      "a": { "label": null, "line": 2, "raw": "1 x1 1 x2 >= 2 ;",
+      "a": { "label": null, "line": 2, "raw": "1 x1 1 x2 >= 2 ;", "part": null,
              "form": { "terms": [ { "variable": "x1", "coefficient": 1 },
                                   { "variable": "x2", "coefficient": 1 } ], "rhs": 2 } },
-      "b": { "label": null, "line": 2, "raw": "1 x1 2 x2 >= 2 ;",
+      "b": { "label": null, "line": 2, "raw": "1 x1 2 x2 >= 2 ;", "part": null,
              "form": { "terms": [ { "variable": "x1", "coefficient": 1 },
                                   { "variable": "x2", "coefficient": 2 } ], "rhs": 2 } },
       "term_diff": { "variables": [ { "variable": "x2", "a": 1, "b": 2 } ], "rhs": null }
@@ -245,6 +289,11 @@ $ opbdiff --format json a.opb b.opb
   "label_permutation": null
 }
 ```
+
+`part` names which constraint of its source line a side is when the
+line stands for more than one (`"right_implication"` /
+`"left_implication"` for the two halves of a `<==>`), and is `null`
+otherwise.
 
 Under `--match-labels`, `label_permutation` becomes an object reporting
 which labels are permuted between the files (`correspondences`, `cycles`,

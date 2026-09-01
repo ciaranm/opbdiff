@@ -1,6 +1,6 @@
 # The OPB dialect we accept
 
-> Drafted by AI assistant under human oversight. Last updated 2026-05-29.
+> Drafted by AI assistant under human oversight. Last updated 2026-09-01.
 
 This document defines the subset of OPB (the pseudo-Boolean
 DIMACS-style format) that `opbdiff` understands. We follow
@@ -17,6 +17,7 @@ An OPB file is a sequence of lines. Each line is one of:
 | Comment      | `* this is a comment`            | Parsed, ignored            |
 | Constraint   | `1 x1 1 x2 >= 2 ;`               | Compared semantically      |
 | Labelled     | `@cardinality 1 x1 1 x2 >= 2 ;`  | Compared; label tracked    |
+| Reified      | `z1 ==> 1 x1 1 x2 >= 2 ;`        | Desugared, then compared   |
 | Objective    | `min: 3 x1 2 x2 ;`               | Compared semantically      |
 | Preserved    | `preserved: 1 x1 1 x2 ;`         | Compared semantically      |
 | Blank        | (empty)                          | Skipped                    |
@@ -68,6 +69,31 @@ A bare integer in the term list is treated as an LHS constant that is
 moved to the RHS during normalisation. See
 [0003](0003-normalization.md).
 
+## Reification shorthands
+
+VeriPB accepts three shorthands that write a constraint as a
+reification. They are syntactic sugar for ordinary pseudo-Boolean
+constraints, and we desugar them during normalisation rather than
+treating them as a kind of their own; see
+[0003](0003-normalization.md#reification-shorthands) for exactly what
+each one stands for.
+
+```
+z1 z2 ~z3 ==> +1 x1 +2 x2 >= 2 ;   % if z1 and z2 and not z3, then the constraint
+z1        <== +1 x1 +2 x2 >= 2 ;   % if the constraint, then z1
+z1       <==> +1 x1 +2 x2 >= 2 ;   % both of the above
+```
+
+The right implication (`==>`) takes one or more literals, read as
+their conjunction. The left implication (`<==`) and the equivalence
+(`<==>`) take exactly one literal. Anything else in front of an arrow
+— a coefficient, say — is an error.
+
+An equivalence stands for **two** constraints: the `==>` direction
+followed by the `<==` direction. Everything downstream of the parser
+therefore has to cope with one source line producing more than one
+canonical constraint.
+
 ## Labels
 
 A constraint line may be prefixed with `@name `, where `name` is a
@@ -76,11 +102,36 @@ constraint. Real labels we have seen include `@c[_1][le]`,
 `@i[a][lb]`, and `@c[money_a_d][[1]gt[2]]` (note the nested
 brackets), so the label name follows the same liberal
 "non-whitespace token" rule as variable names. Labels on lines other
-than constraints are not part of v1.
+than constraints are rejected.
+
+Since each label names one constraint, a line that stands for more
+than one carries **one label for each**, and the i-th label names the
+i-th constraint the line is loaded as. So
+
+```
+@right @left z1 <==> 1 x1 1 x2 >= 1 ;
+```
+
+names the `==>` direction `@right` and the `<==` direction `@left`.
+A line carries either no labels at all or exactly as many as it has
+constraints; any other number is an error, as it is in VeriPB.
 
 Comment lines and labelled constraints can interleave freely; a
-labelled constraint is just a constraint with a leading label
-token.
+labelled constraint is just a constraint with leading label
+tokens.
+
+## Whitespace
+
+Operators must be whitespace-separated: `1 x1 >= 1 ;`, not
+`1 x1>=1;`. The single exception is the `;` terminator, which may be
+attached to the preceding token because real files write it both
+ways.
+
+VeriPB's own OPB lexer needs no whitespace at all — `z1<==>1 x1 >= 1`
+is legal there — but every file we have seen writes operators with
+surrounding whitespace, and accepting an attached `<==>` while still
+rejecting an attached `>=` would be a confusing half-measure. If this
+ever bites, the fix is to tokenise properly, all operators at once.
 
 ## Terminator
 
@@ -99,6 +150,10 @@ Lines that omit the terminator are rejected.
   files of interest do not currently emit `=`.
 - Non-integer coefficients (OPB is integer-only).
 - Lines that mix label syntax with non-constraint roles.
+- A number of labels on a line that is neither zero nor one per
+  constraint the line stands for.
+- A left implication or equivalence with more than one literal in
+  front of the arrow, or any implication with none.
 
 ## Examples
 
@@ -111,6 +166,8 @@ preserved: 1 x1 1 x2 ;
 
 @card 1 x1 1 x2 1 x3 >= 2 ;
 +1 ~x3 +1 ~x2 +1 ~x1 <= 1 ;
+
+@right @left f[a][ge3] <==> 1 i[a][b0] 2 i[a][b1] 4 i[a][b2] >= 3 ;
 ```
 
 The two constraints above are semantically equivalent. See

@@ -5,6 +5,14 @@
 //! either a standalone token or attached to the preceding token (`>= 1;`
 //! vs `>= 1 ;`). We handle that by splitting trailing `;` off any raw
 //! token before classification.
+//!
+//! Every other operator — `>=`, `<=`, and the reification arrows `==>`,
+//! `<==` and `<==>` — must be whitespace-separated. VeriPB's own OPB
+//! lexer does not require that (`z1<==>1 x1 >= 1` is legal there), but
+//! every OPB file we have seen writes operators with surrounding
+//! whitespace, and accepting attached arrows while still rejecting an
+//! attached `>=` would be a confusing half-measure. See
+//! `dev_docs/0002-opb-format.md`.
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Token<'a> {
@@ -19,6 +27,12 @@ pub(crate) enum Token<'a> {
     GreaterOrEqual,
     LessOrEqual,
     Equal,
+    /// The `==>` arrow of a right implication.
+    RightImplication,
+    /// The `<==` arrow of a left implication.
+    LeftImplication,
+    /// The `<==>` arrow of an equivalence.
+    Equivalence,
     Semicolon,
     /// The `min:` keyword introducing an objective line.
     Min,
@@ -50,6 +64,9 @@ fn classify(token: &str) -> Token<'_> {
         ">=" => Token::GreaterOrEqual,
         "<=" => Token::LessOrEqual,
         "=" => Token::Equal,
+        "==>" => Token::RightImplication,
+        "<==" => Token::LeftImplication,
+        "<==>" => Token::Equivalence,
         ";" => Token::Semicolon,
         "min:" => Token::Min,
         "preserved:" => Token::Preserved,
@@ -94,6 +111,30 @@ mod tests {
         assert_eq!(classify(";"), Token::Semicolon);
         assert_eq!(classify("min:"), Token::Min);
         assert_eq!(classify("preserved:"), Token::Preserved);
+    }
+
+    #[test]
+    fn classifies_reification_arrows() {
+        assert_eq!(classify("==>"), Token::RightImplication);
+        assert_eq!(classify("<=="), Token::LeftImplication);
+        assert_eq!(classify("<==>"), Token::Equivalence);
+    }
+
+    #[test]
+    fn tokenizes_a_right_implication_line() {
+        assert_eq!(
+            tokenize_line("x1 ~x2 ==> 1 x3 >= 1 ;"),
+            vec![
+                Token::PositiveLiteral("x1"),
+                Token::NegatedLiteral("x2"),
+                Token::RightImplication,
+                Token::Coefficient(1),
+                Token::PositiveLiteral("x3"),
+                Token::GreaterOrEqual,
+                Token::Coefficient(1),
+                Token::Semicolon,
+            ],
+        );
     }
 
     #[test]

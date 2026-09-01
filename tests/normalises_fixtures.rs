@@ -82,3 +82,21 @@ fn money_pair_normalises_and_shares_bounds() {
     assert!(shared > 0);
     assert!(shared < a.constraints.len());
 }
+
+#[test]
+fn reified_pair_fully_matches_under_normalisation() {
+    // `reified.opb` writes its constraints with the `==>`, `<==` and
+    // `<==>` shorthands; `reified.verifiedopb` writes out the
+    // pseudo-Boolean constraints they stand for. Desugaring is what
+    // makes the two sides normalise identically. The equivalence line
+    // stands for two constraints, so the sugar side has one fewer
+    // constraint *line* but the same constraint count.
+    let a = load("reified.opb");
+    let b = load("reified.verifiedopb");
+    assert_eq!(a.constraints.len(), b.constraints.len());
+    assert_eq!(
+        shared_constraint_count(&a, &b),
+        a.constraints.len(),
+        "every reification shorthand should normalise to its expansion",
+    );
+}
