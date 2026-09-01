@@ -24,6 +24,11 @@
 //! version (`schema_version`). Bump [`SCHEMA_VERSION`] on any
 //! breaking change to the shape below.
 //!
+//! `part` on a constraint side was added as an additive field within
+//! schema version 1: it is `null` for every constraint that does not
+//! come from an equivalence (`<==>`) line, which is all of them in
+//! files that use no reification shorthands.
+//!
 //! ## Shape (schema version 1)
 //!
 //! ```json
@@ -49,7 +54,7 @@
 //!     {
 //!       "kind": "differ",
 //!       "index_a": 3, "index_b": 3,
-//!       "a": { "label": null, "line": 4, "raw": "...",
+//!       "a": { "label": null, "line": 4, "raw": "...", "part": null,
 //!              "form": { "terms": [{ "variable": "x1", "coefficient": 1 }], "rhs": 2 } },
 //!       "b": { ... },
 //!       "term_diff": {
@@ -121,7 +126,7 @@ use crate::compare::{
 };
 use crate::model::{
     CanonicalConstraint, CanonicalLabelledConstraint, CanonicalObjectiveItem,
-    CanonicalPreservedItem,
+    CanonicalPreservedItem, ConstraintPart,
 };
 
 /// Version of the JSON schema this module emits. Bump on any breaking
@@ -288,12 +293,18 @@ impl<'a> TermJson<'a> {
 }
 
 /// A labelled constraint with the source metadata a consumer needs to
-/// locate it (`line`, `raw`) plus its semantic `form`.
+/// locate it (`line`, `raw`, `part`) plus its semantic `form`.
 #[derive(Serialize)]
 struct ConstraintSide<'a> {
     label: Option<&'a str>,
     line: usize,
     raw: &'a str,
+    /// `"right_implication"` or `"left_implication"` when this is one
+    /// of the two constraints an equivalence (`<==>`) line stands for,
+    /// `null` otherwise. Two entries can share a `line` and `raw`, so a
+    /// consumer keying on the source line needs this to tell them
+    /// apart.
+    part: Option<&'static str>,
     form: FormJson<'a>,
 }
 
@@ -303,6 +314,10 @@ impl<'a> ConstraintSide<'a> {
             label: c.label.as_deref(),
             line: c.line,
             raw: c.raw.trim(),
+            part: c.part.map(|p| match p {
+                ConstraintPart::RightImplication => "right_implication",
+                ConstraintPart::LeftImplication => "left_implication",
+            }),
             form: FormJson::from_form(&c.form),
         }
     }

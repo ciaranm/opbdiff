@@ -304,3 +304,81 @@ fn ignore_no_preserved_in_json_keeps_raw_finding() {
     assert_eq!(v["comparison"]["ignored_missing_preserved"], "a");
     assert_eq!(v["preserved"]["kind"], "only_in_b");
 }
+
+#[test]
+fn reification_shorthands_compare_equal_to_their_expansion() {
+    run(&data("reified.opb"), &data("reified.verifiedopb"))
+        .assert()
+        .success()
+        .stdout(contains("semantically equivalent"))
+        .stdout(contains("8 constraints compared"));
+}
+
+#[test]
+fn an_equivalence_line_is_reported_with_the_direction_it_stands_for() {
+    // Both constraints an equivalence stands for share a source line,
+    // so the report has to say which of the two it is showing.
+    let a = write_tmp("iff_a.opb", "z1 <==> 1 x1 1 x2 >= 1 ;\n");
+    let b = write_tmp(
+        "iff_b.opb",
+        "1 ~z1 1 x1 1 x2 >= 1 ;\n2 z1 1 ~x1 1 ~x2 >= 3 ;\n",
+    );
+    run(&a, &b)
+        .assert()
+        .code(1)
+        .stdout(contains("Differing at constraint #2"))
+        .stdout(contains("[<== direction]"));
+}
+
+#[test]
+fn a_line_with_the_wrong_number_of_labels_is_rejected() {
+    // An equivalence stands for two constraints, so one label is
+    // ambiguous.
+    let a = write_tmp("label_count_a.opb", "@only z1 <==> 1 x1 >= 1 ;\n");
+    let b = write_tmp("label_count_b.opb", "1 x1 >= 1 ;\n");
+    run(&a, &b)
+        .assert()
+        .code(2)
+        .stderr(contains("stands for 2 constraints"));
+}
+
+#[test]
+fn json_marks_which_direction_of_an_equivalence_a_constraint_is() {
+    let a = write_tmp("json_iff_a.opb", "z1 <==> 1 x1 1 x2 >= 1 ;\n");
+    let b = write_tmp(
+        "json_iff_b.opb",
+        "1 ~z1 1 x1 1 x2 >= 2 ;\n2 z1 1 ~x1 1 ~x2 >= 3 ;\n",
+    );
+    let (code, v) = run_json(&[], &a, &b);
+    assert_eq!(code, 1);
+    assert_eq!(v["constraints"][0]["a"]["part"], "right_implication");
+    assert_eq!(v["constraints"][1]["a"]["part"], "left_implication");
+    // Both halves point back at the one source line they came from.
+    assert_eq!(v["constraints"][0]["a"]["line"], 1);
+    assert_eq!(v["constraints"][1]["a"]["line"], 1);
+    // An ordinary constraint has no part.
+    assert_eq!(v["constraints"][0]["b"]["part"], serde_json::Value::Null);
+}
+
+#[test]
+fn a_max_objective_equals_the_negated_min_objective() {
+    // VeriPB negates a `max:` objective on load, so the two files
+    // describe the same optimisation problem.
+    let a = write_tmp("maxobj_a.opb", "max: 1 x1 2 x2 ;\n1 x1 1 x2 >= 1 ;\n");
+    let b = write_tmp("maxobj_b.opb", "min: -1 x1 -2 x2 ;\n1 x1 1 x2 >= 1 ;\n");
+    run(&a, &b)
+        .assert()
+        .success()
+        .stdout(contains("semantically equivalent"));
+}
+
+#[test]
+fn a_max_objective_differs_from_the_same_min_objective() {
+    let a = write_tmp("maxobj_c.opb", "max: 1 x1 ;\n1 x1 >= 1 ;\n");
+    let b = write_tmp("maxobj_d.opb", "min: 1 x1 ;\n1 x1 >= 1 ;\n");
+    run(&a, &b)
+        .assert()
+        .code(1)
+        .stdout(contains("Objectives differ"))
+        .stdout(contains("max: 1 x1 ;"));
+}

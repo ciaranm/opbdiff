@@ -227,3 +227,53 @@ fn unordered_with_label_check_on_odd_even_sum() {
     // analysis runs without panicking and produces a sensible summary.
     assert!(s.matches + s.label_mismatches == a.constraints.len());
 }
+
+#[test]
+fn reified_pair_is_equivalent_to_its_expansion() {
+    // The reification shorthands are syntactic sugar, so a file using
+    // them compares equal to one writing the constraints out.
+    let a = load("reified.opb");
+    let b = load("reified.verifiedopb");
+    let diff = compare_ordered(&a, &b);
+    assert!(diff.is_equivalent(), "diff = {diff:?}");
+    let s = diff.summary();
+    assert_eq!(s.matches, 8);
+    assert_eq!(s.differing, 0);
+}
+
+#[test]
+fn reified_pair_honours_labels_on_both_directions_of_an_equivalence() {
+    // The equivalence line carries one label per direction, in the
+    // order the two constraints are loaded, so a label check against
+    // the expanded side has to line them up.
+    let a = load("reified.opb");
+    let b = load("reified.verifiedopb");
+    let diff = compare(
+        &a,
+        &b,
+        CompareOptions {
+            mode: CompareMode::Ordered,
+            match_labels: false,
+            label_check: Some(opbdiff::compare::ReferenceSide::B),
+            aux_projection: None,
+            ignore_missing_preserved: None,
+        },
+    );
+    assert!(diff.is_equivalent(), "diff = {diff:?}");
+    assert_eq!(diff.summary().label_mismatches, 0);
+}
+
+#[test]
+fn a_wrong_reification_coefficient_is_caught() {
+    // The point of desugaring is to still catch an encoder that gets
+    // the reification itself wrong: here the literal is carried at 5
+    // where the degree of the negated constraint is 4.
+    let a = load("reified.opb");
+    let input = std::fs::read_to_string(fixture("reified.verifiedopb"))
+        .unwrap()
+        .replace("4 hit", "5 hit");
+    let b = normalise_file(&parse(&input).unwrap()).unwrap();
+    let diff = compare_ordered(&a, &b);
+    assert!(!diff.is_equivalent());
+    assert_eq!(diff.summary().differing, 1);
+}

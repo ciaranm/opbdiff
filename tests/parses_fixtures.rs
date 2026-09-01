@@ -46,3 +46,9 @@ fn sudoku_pair_parses() {
     assert_parses("sudoku.opb");
     assert_parses("sudoku.verifiedopb");
 }
+
+#[test]
+fn reified_pair_parses() {
+    assert_parses("reified.opb");
+    assert_parses("reified.verifiedopb");
+}

@@ -1,0 +1,9 @@
+preserved: i[a][b0] i[a][b1] i[a][b2] ;
+@i[a][lb] 1 i[a][b0] 2 i[a][b1] 4 i[a][b2] >= 0 ;
+@i[a][ub] -1 i[a][b0] -2 i[a][b1] -4 i[a][b2] >= -5 ;
+@f[a][ge3][right] 3 ~f[a][ge3] 1 i[a][b0] 2 i[a][b1] 4 i[a][b2] >= 3 ;
+@f[a][ge3][left] 5 f[a][ge3] 1 ~i[a][b0] 2 ~i[a][b1] 4 ~i[a][b2] >= 5 ;
+@c[a][cond] 2 ~cond 2 skip 1 i[a][b0] 2 i[a][b1] 4 i[a][b2] >= 2 ;
+@c[a][hit] 4 hit 1 ~i[a][b0] 2 ~i[a][b1] 4 ~i[a][b2] >= 4 ;
+@c[a][guard] 4 ~guard 1 ~i[a][b0] 2 ~i[a][b1] 4 ~i[a][b2] >= 4 ;
+@c[a][always] 1 i[a][b0] 2 i[a][b1] 4 i[a][b2] >= 0 ;

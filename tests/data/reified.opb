@@ -1,0 +1,16 @@
+* #variable= 8 #constraint= 8
+preserved: i[a][b0] i[a][b1] i[a][b2] ;
+@i[a][lb] 1 i[a][b0] 2 i[a][b1] 4 i[a][b2] >= 0 ;
+@i[a][ub] 1 i[a][b0] 2 i[a][b1] 4 i[a][b2] <= 5 ;
+* reified comparison, written with the equivalence shorthand: one
+* label for each of the two constraints it stands for
+@f[a][ge3][right] @f[a][ge3][left] f[a][ge3] <==> 1 i[a][b0] 2 i[a][b1] 4 i[a][b2] >= 3 ;
+* conditional lower bound: cond and not skip together imply a >= 2
+@c[a][cond] cond ~skip ==> 1 i[a][b0] 2 i[a][b1] 4 i[a][b2] >= 2 ;
+* hit is implied by a >= 4
+@c[a][hit] hit <== 1 i[a][b0] 2 i[a][b1] 4 i[a][b2] >= 4 ;
+* guard implies an upper bound
+@c[a][guard] guard ==> 1 i[a][b0] 2 i[a][b1] 4 i[a][b2] <= 3 ;
+* a consequent that is trivially satisfied is implied by anything, so
+* this line loses its literal entirely
+@c[a][always] always ==> 1 i[a][b0] 2 i[a][b1] 4 i[a][b2] >= 0 ;

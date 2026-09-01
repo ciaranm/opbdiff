@@ -1,6 +1,6 @@
 # Comparison algorithm
 
-> Drafted by AI assistant under human oversight. Last updated 2026-06-01.
+> Drafted by AI assistant under human oversight. Last updated 2026-09-01.
 
 The comparison engine consumes two canonical models and produces a
 structured diff result. This document defines its behaviour.
@@ -10,14 +10,29 @@ structured diff result. This document defines its behaviour.
 For comparison purposes a canonical model is split into named
 sections:
 
-- **objective** (`min:`): at most one per file. Either both files
-  have one and they are compared, or neither does, or it is a
-  per-side missing/extra mismatch.
+- **objective** (`min:` / `max:`, compared in minimisation form): at
+  most one per file. Either both files have one and they are compared,
+  or neither does, or it is a per-side missing/extra mismatch.
 - **preserved** (`preserved:`): same shape as objective.
 - **constraints**: ordered sequence (or multiset under
   `--unordered`).
 
 Differences in any section count towards the overall verdict.
+
+## One line, one constraint — usually
+
+Positions and indices below are over *constraints*, not source lines.
+Most of the time these coincide, but an equivalence (`<==>`) stands
+for two constraints, so its two halves occupy two consecutive
+positions, carry a label each, and share a `line` and `raw`. See
+[0003](0003-normalization.md#reification-shorthands).
+
+This is what makes a file using the shorthand line up against one
+writing the expansion out: the sugar side has fewer *lines* but the
+same number of constraints, so ordered comparison still pairs them by
+position. Reports disambiguate the two halves by the direction they
+came from (`[==> direction]` / `[<== direction]` in plain text,
+`part` in JSON).
 
 ## Constraint comparison: ordered (default)
 
