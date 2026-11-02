@@ -24,9 +24,10 @@ ordered lexicographically by variable name, with the implied meaning
 over Boolean variables. The sorted-tuple-with-RHS encoding gives a
 deterministic representation suitable for hashing and equality.
 
-For objectives and `preserved:`, there is no RHS — they reduce to the
-sorted term list alone (as distinct kinds, so an objective is never
-equal to a `preserved:` of the same body).
+For objectives and `preserved:`, there is no RHS. A `preserved:` list
+reduces to its sorted literals, and an objective to its sorted term list
+and its constant (as distinct kinds, so an objective is never equal to a
+`preserved:` of the same body).
 
 ## Normalisation steps
 
@@ -106,11 +107,15 @@ Canonical form: `( [(x1,1), (x2,1), (x3,1)], 2 )`. ✓ matches A.
 
 ## Objectives
 
-An objective reduces to its sorted term list, with two things resolved
+An objective reduces to its sorted term list and its constant, with two
+things resolved
 on the way:
 
-- **Constants are dropped.** Shifting an objective by a constant does
-  not change what minimises it.
+- **Constants are kept,** summed wherever they appear, including those
+  the negated-literal rewrite produces. Shifting an objective by a
+  constant does not change what minimises it, but it does change the
+  objective values a proof concludes with, so two objectives that
+  differ only by a constant are different objectives.
 - **`max:` is negated.** VeriPB minimises internally and negates a
   maximisation objective on load, keeping no record that the source
   said `max:` — `PBObjective` has only terms and a constant. So
@@ -119,7 +124,7 @@ on the way:
 
 Negation happens through the same `sign` factor that orients a `<=`
 constraint, so it composes with the negated-literal rewrite: `max: 1 ~x1`
-and `min: 1 x1` agree, differing only by the dropped constant.
+is `min: 1 x1 -1`.
 
 ## Reification shorthands
 

@@ -329,6 +329,8 @@ struct ObjectiveSide<'a> {
     raw: &'a str,
     /// Sorted objective terms; objectives carry no RHS.
     terms: Vec<TermJson<'a>>,
+    /// The objective's constant, in minimisation form.
+    constant: i64,
 }
 
 impl<'a> ObjectiveSide<'a> {
@@ -337,6 +339,7 @@ impl<'a> ObjectiveSide<'a> {
             line: item.line,
             raw: item.raw.trim(),
             terms: item.form.terms.iter().map(TermJson::from_pair).collect(),
+            constant: item.form.constant,
         }
     }
 }
@@ -829,6 +832,7 @@ mod tests {
         ));
         assert_eq!(v["objective"]["kind"], "differ");
         assert_eq!(v["objective"]["a"]["terms"].as_array().unwrap().len(), 2);
+        assert_eq!(v["objective"]["a"]["constant"], 0);
         assert_eq!(v["preserved"]["kind"], "differ");
         assert_eq!(v["preserved"]["a"]["literals"][0]["variable"], "x1");
         assert_eq!(v["summary"]["objective_difference"], Value::Bool(true));
