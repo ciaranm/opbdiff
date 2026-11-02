@@ -49,7 +49,9 @@ What works:
   constraints and takes one label for each, `==>` first.
 - `min:` and `max:` objectives. VeriPB minimises internally and negates
   a `max:` objective on load, so `max: f` and `min: -f` compare equal
-  (and `max: f` and `min: f` do not).
+  (and `max: f` and `min: f` do not). An objective's constant is
+  compared too: it does not change which solutions are optimal, but it
+  does change the values a proof concludes with.
 - Ordered (by position) and `--unordered` (multiset) comparison.
 - `--match-labels`: pair constraints by shared label first, then diff
   each pair's contents (with the remainder handled by the fallback

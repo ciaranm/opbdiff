@@ -382,3 +382,26 @@ fn a_max_objective_differs_from_the_same_min_objective() {
         .stdout(contains("Objectives differ"))
         .stdout(contains("max: 1 x1 ;"));
 }
+
+#[test]
+fn objectives_differing_only_by_a_constant_differ() {
+    // The same solutions are optimal, but a proof's conclusion would
+    // report different objective values.
+    let a = write_tmp("objconst_a.opb", "min: 1 x1 3 ;\n1 x1 >= 1 ;\n");
+    let b = write_tmp("objconst_b.opb", "min: 1 x1 ;\n1 x1 >= 1 ;\n");
+    run(&a, &b)
+        .assert()
+        .code(1)
+        .stdout(contains("Objectives differ"))
+        .stdout(contains("min: 1 x1 3 ;"));
+}
+
+#[test]
+fn a_max_objective_with_a_constant_equals_the_negated_min_objective() {
+    let a = write_tmp("objconst_c.opb", "max: 1 x1 2 x2 -2 ;\n1 x1 1 x2 >= 1 ;\n");
+    let b = write_tmp("objconst_d.opb", "min: -1 x1 -2 x2 2 ;\n1 x1 1 x2 >= 1 ;\n");
+    run(&a, &b)
+        .assert()
+        .success()
+        .stdout(contains("semantically equivalent"));
+}

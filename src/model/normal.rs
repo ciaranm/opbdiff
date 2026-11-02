@@ -282,22 +282,21 @@ fn normalise_objective(o: &Objective) -> Result<CanonicalObjective, NormaliseErr
         kind: NormaliseErrorKind::Overflow,
     };
 
-    // Objectives have no operator and no RHS. Any constant terms
-    // accumulated by the negated-literal rewrite are dropped, because
-    // shifting an objective by a constant does not change what
-    // minimises it.
+    // Objectives have no operator and no RHS. Constant terms, explicit
+    // or from the negated-literal rewrite, are kept: they do not change
+    // what minimises the objective, but they do change the values a
+    // proof concludes with.
     //
     // A `max:` objective is negated: VeriPB minimises internally and
     // negates a maximisation objective on load, keeping no record that
     // the source said `max:`, so `max: f` and `min: -f` are the same
     // objective and canonicalise alike.
     let sign = if o.maximise { -1 } else { 1 };
-    let (var_coefs, _constant_sum) =
-        collect_linear_form(&o.terms, sign).map_err(|()| overflow())?;
+    let (var_coefs, constant) = collect_linear_form(&o.terms, sign).map_err(|()| overflow())?;
 
     let terms: Vec<(String, i64)> = var_coefs.into_iter().filter(|(_, k)| *k != 0).collect();
 
-    Ok(CanonicalObjective { terms })
+    Ok(CanonicalObjective { terms, constant })
 }
 
 fn normalise_preserved(p: &Preserved) -> CanonicalPreserved {
@@ -439,18 +438,51 @@ mod tests {
 
     #[test]
     fn empty_objective_after_cancellation() {
-        // min: 1 x1 + 1 ~x1  ==>  the variable terms cancel and the
-        // implied constant is dropped; canonical objective has no terms.
+        // min: 1 x1 + 1 ~x1  ==>  the variable terms cancel, leaving
+        // only the implied constant.
         let f = parse("min: 1 x1 1 ~x1 ;\n").unwrap();
         let n = normalise_file(&f).unwrap();
         let obj = n.objective.unwrap();
         assert!(obj.form.terms.is_empty());
+        assert_eq!(obj.form.constant, 1);
+    }
+
+    fn objective_form(input: &str) -> CanonicalObjective {
+        let f = parse(input).expect("parse");
+        let n = normalise_file(&f).expect("normalise");
+        n.objective.expect("objective").form
     }
 
     fn objective_terms(input: &str) -> Vec<(String, i64)> {
-        let f = parse(input).expect("parse");
-        let n = normalise_file(&f).expect("normalise");
-        n.objective.expect("objective").form.terms
+        objective_form(input).terms
+    }
+
+    #[test]
+    fn objective_constants_are_kept() {
+        // A constant does not change which solutions are optimal, but it
+        // does change the objective values a proof concludes with.
+        assert_eq!(objective_form("min: 1 x1 3 ;\n").constant, 3);
+        assert_ne!(
+            objective_form("min: 1 x1 3 ;\n"),
+            objective_form("min: 1 x1 4 ;\n"),
+        );
+        assert_ne!(
+            objective_form("min: 1 x1 3 ;\n"),
+            objective_form("min: 1 x1 ;\n"),
+        );
+        // Constants are summed wherever they appear.
+        assert_eq!(
+            objective_form("min: 1 1 x1 2 ;\n"),
+            objective_form("min: 1 x1 3 ;\n"),
+        );
+    }
+
+    #[test]
+    fn maximisation_negates_the_constant_too() {
+        assert_eq!(
+            objective_form("max: 1 x1 -2 ;\n"),
+            objective_form("min: -1 x1 2 ;\n"),
+        );
     }
 
     #[test]
@@ -470,11 +502,14 @@ mod tests {
 
     #[test]
     fn maximisation_negates_after_the_negated_literal_rewrite() {
-        // `max: 1 ~x1` is `min: -1 ~x1` is `min: 1 x1` less a constant,
-        // and the constant is dropped either way.
+        // `max: 1 ~x1` is `min: -1 ~x1` is `min: 1 x1 -1`.
         assert_eq!(
-            objective_terms("max: 1 ~x1 ;\n"),
-            objective_terms("min: 1 x1 ;\n"),
+            objective_form("max: 1 ~x1 ;\n"),
+            objective_form("min: 1 x1 -1 ;\n"),
+        );
+        assert_ne!(
+            objective_form("max: 1 ~x1 ;\n"),
+            objective_form("min: 1 x1 ;\n"),
         );
     }
 

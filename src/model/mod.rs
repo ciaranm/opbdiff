@@ -19,14 +19,18 @@ pub struct CanonicalConstraint {
 /// A canonical objective: a sorted term list with no RHS, always in
 /// minimisation form.
 ///
-/// Constant terms in the source objective are dropped during
-/// normalisation because shifting an objective by a constant does
-/// not change what minimises it. A `max:` objective is negated, since
+/// The constant is kept: shifting an objective by a constant does not
+/// change what minimises it, but it does change the objective values a
+/// proof concludes with, so two files whose objectives differ only by a
+/// constant are not equivalent. A `max:` objective is negated, since
 /// VeriPB minimises internally and negates one on load, so `max: f`
 /// and `min: -f` share a canonical form.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CanonicalObjective {
     pub terms: Vec<(String, i64)>,
+    /// The sum of the explicit constant terms and those the
+    /// negated-literal rewrite produces, in minimisation form.
+    pub constant: i64,
 }
 
 /// A canonical `preserved:` list. Order does not matter for projected

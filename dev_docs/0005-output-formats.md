@@ -83,7 +83,7 @@ exit code: `0` ⇔ `true`, `1` ⇔ `false`), `comparison` (mode,
 
 `objective` and `preserved` are tagged records with `kind` ∈
 `{both_absent, match, differ, only_in_a, only_in_b}`. Each side carries
-`line`, `raw`, and the canonical content (`terms` for objectives;
+`line`, `raw`, and the canonical content (`terms` and `constant` for objectives;
 `literals` for preserved).
 
 `comparison.ignored_missing_preserved` is `"a"`/`"b"` when a missing
